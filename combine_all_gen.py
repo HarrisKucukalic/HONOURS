@@ -2,13 +2,14 @@ import pandas as pd
 import os
 import glob
 
+# --- Configuration ---
+
+# Cleaned column names for more robust matching (removed extra spaces)
 FINAL_COLUMNS = [
-    'date',
-    'Wind -  MW',
-    'Solar (Utility) -  MW',
-    'Solar (Rooftop) -  MW'
+    'DateTime', 'Wind -  MW', 'Solar (Utility) -  MW', 'Solar (Rooftop) -  MW'
 ]
 
+# It's good practice to use relative paths or ensure this directory exists
 DATA_DIRECTORY = r'C:\projects\HONOURS'
 
 
@@ -17,85 +18,69 @@ def process_and_combine_state_data():
     Loads, filters, and combines historical and current data for each state,
     then saves the result to a new CSV file.
     """
-    # A dictionary to hold the file paths for each state
+    # CORRECTED FILE NAMES
     state_files = {
         'New South Wales': {
-            'hist': os.path.join(DATA_DIRECTORY, 'New South Wales_processed.csv'),
-            'curr': os.path.join(DATA_DIRECTORY, 'New South Wales_combined.csv')
+            'hist': r'C:\projects\HONOURS\day_to_5min\20240703 New South Wales_processed.csv',
+            'curr': r'C:\projects\HONOURS\combined_5min\New South Wales_combined.csv'
         },
         'Queensland': {
-            'hist': os.path.join(DATA_DIRECTORY, 'Queensland_processed.csv'),
-            'curr': os.path.join(DATA_DIRECTORY, 'Queensland_combined.csv')
+            'hist': r'C:\projects\HONOURS\day_to_5min\20240703 Queensland_processed.csv',
+            'curr': r'C:\projects\HONOURS\combined_5min\Queensland_combined.csv'
         },
         'Victoria': {
-            'hist': os.path.join(DATA_DIRECTORY, 'Victoria_processed.csv'),
-            'curr': os.path.join(DATA_DIRECTORY, 'Victoria_combined.csv')
+            'hist': r'C:\projects\HONOURS\day_to_5min\20240703 Victoria_processed.csv',
+            'curr': r'C:\projects\HONOURS\combined_5min\Victoria_combined.csv'
         }
     }
 
     print("--- Starting Data Merging and Saving Process ---")
 
-    # Loop through each state defined in the dictionary
     for state, files in state_files.items():
         print(f"\n--- Processing: {state} ---")
-        try:
-            # --- 1. Load the historical and current data files ---
-            df_hist = pd.read_csv(files['hist'])
-            df_curr = pd.read_csv(files['curr'])
-            print(f"Loaded '{os.path.basename(files['hist'])}' and '{os.path.basename(files['curr'])}'")
 
-            # --- 2. Filter and prepare each DataFrame ---
-            dataframes_to_combine = []
-            for name, df in [('hist', df_hist), ('curr', df_curr)]:
-                # Clean column names to remove leading/trailing whitespace
-                df.columns = df.columns.str.strip()
+        # --- 1. Load and Standardize the data files ---
+        df_hist = pd.read_csv(files['hist'])
+        # df_hist.rename(columns={df_hist.columns[0]: 'DateTime'}, inplace=True)
+        df_curr = pd.read_csv(files['curr'])
 
-                # Ensure the 'date' column exists before proceeding
-                if 'date' not in df.columns:
-                    print(f"⚠️  Warning: 'date' column not found in {name} file for {state}. Skipping this file.")
-                    continue
+        print(df_hist.head())
+        print(f"Historical columns: {df_hist.columns.tolist()}")
+        print(df_curr.head())
+        print(f"Current columns:    {df_curr.columns.tolist()}")
+        if df_hist is None or df_curr is None:
+            print(f"⚠️  SKIPPING {state}: Could not load one or both data files.")
+            continue
 
-                # Convert date column to datetime objects for proper merging
-                # Using format='mixed' allows pandas to infer the format for each date string individually.
-                # This is more robust for handling multiple date formats (e.g., DD/MM/YYYY and YYYY-MM-DD).
-                df['date'] = pd.to_datetime(df['date'], format='mixed', dayfirst=True)
+        # --- 2. Diagnostic Prints ---
+        print(f"  - Historical data range: {df_hist['DateTime'].min()} to {df_hist['DateTime'].max()}")
+        print(f"  - Current data range:    {df_curr['DateTime'].min()} to {df_curr['DateTime'].max()}")
 
-                # Find which of the FINAL_COLUMNS are present in this DataFrame
-                cols_to_keep = [col for col in FINAL_COLUMNS if col in df.columns]
+        # --- 3. Filter and Combine ---
+        # Keep only the columns we need from each dataframe
+        df_hist_filtered = df_hist[[col for col in FINAL_COLUMNS if col in df_hist.columns]]
+        df_curr_filtered = df_curr[[col for col in FINAL_COLUMNS if col in df_curr.columns]]
 
-                if 'date' not in cols_to_keep:
-                    cols_to_keep.insert(0, 'date')  # Make sure date is always included
+        # Concatenate all prepared dataframes vertically
+        combined_df = pd.concat([df_hist_filtered, df_curr_filtered], ignore_index=True)
+        rows_before_dedupe = len(combined_df)
+        print(f"Combined data before deduplication. Total rows: {rows_before_dedupe}")
 
-                print(f"Found columns in {name} file: {cols_to_keep}")
-                dataframes_to_combine.append(df[cols_to_keep])
+        # Remove duplicate rows based on the 'DateTime' column, keeping the last entry.
+        combined_df.drop_duplicates(subset='DateTime', keep='last', inplace=True)
+        rows_after_dedupe = len(combined_df)
 
-            # --- 3. Combine the filtered DataFrames ---
-            if not dataframes_to_combine:
-                print(f"⚠️  SKIPPING {state}: No data to combine after filtering.")
-                continue
+        print(
+            f"  - Found and removed {rows_before_dedupe - rows_after_dedupe} duplicate rows (prioritizing current data).")
 
-            # Concatenate all prepared dataframes vertically
-            combined_df = pd.concat(dataframes_to_combine, ignore_index=True)
+        # Sort the final dataframe by date
+        combined_df.sort_values(by='DateTime', inplace=True)
+        print(f"Combined data for {state}. Final shape: {combined_df.shape}")
 
-            # Remove duplicate rows based on the 'date' column, keeping the last entry.
-            # This ensures that data from the 'curr' file overwrites 'hist' data if dates overlap.
-            combined_df.drop_duplicates(subset='date', keep='last', inplace=True)
-
-            # Sort the final dataframe by date
-            combined_df.sort_values(by='date', inplace=True)
-
-            print(f"Combined data for {state}. Final shape: {combined_df.shape}")
-
-            # --- 4. Save the final result ---
-            output_path = os.path.join(DATA_DIRECTORY, f'{state}_final.csv')
-            # index=False prevents pandas from writing row numbers into the file
-            combined_df.to_csv(output_path, index=False)
-            print(f"✅ Successfully saved merged data to '{output_path}'")
-
-        except FileNotFoundError as e:
-            print(f"❌ ERROR for {state}: File not found. Please check the path. Details: {e}")
-        except Exception as e:
-            print(f"❌ An unexpected error occurred while processing {state}: {e}")
+        # --- 4. Save the final result ---
+        output_path = os.path.join(DATA_DIRECTORY, f'{state}_final.csv')
+        combined_df.to_csv(output_path, index=False)
+        print(f"✅ Successfully saved merged data to '{output_path}'")
 
     print("\n--- All states processed. ---")
 

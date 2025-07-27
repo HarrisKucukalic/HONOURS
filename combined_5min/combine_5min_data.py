@@ -98,7 +98,7 @@ def combine_and_clean_by_state():
         # Save the final, combined DataFrame to a new CSV file
         # The output file will be saved in the same directory as the script.
         output_filename = f"{state}_combined.csv"
-        combined_df.to_csv(output_filename)
+        combined_df.to_csv(output_filename, index_label='DateTime')
         print(f"✅ Successfully saved combined data to '{output_filename}'")
 
     print("\n--- All states processed. ---")
