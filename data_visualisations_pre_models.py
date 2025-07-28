@@ -94,13 +94,13 @@ if __name__ == '__main__':
     # This should be one of the files created by the previous script.
     # For example: 'NSW_PRICE_DEMAND_AEMO_combined.csv'
 
-    input_csv = r'C:\projects\HONOURS\Queensland_corrected.csv'
+    input_csv = r'C:\projects\HONOURS\AEMO_combined_price\QLD_PRICE_DEMAND_AEMO_combined.csv'
 
     # Specify the columns you want to plot.
     # 'SETTLEMENTDATE' is the time column.
     # For the value, you could use 'RRP' (Regional Reference Price) or 'TOTALDEMAND'.
-    date_col = 'DateTime'
-    value_col_to_plot = 'Wind -  MW'  # You can change this to 'TOTALDEMAND' or another relevant column
+    date_col = 'SETTLEMENTDATE'
+    value_col_to_plot = 'RRP'  # You can change this to 'TOTALDEMAND' or another relevant column
 
     # --- Execution ---
     # Call the function with your specified configuration
