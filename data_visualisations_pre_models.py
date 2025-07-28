@@ -1,107 +1,209 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import os
 
+# --- Configuration ---
 
-def create_time_series_plot(csv_filepath, date_column, value_column='RRP'):
+# Directory where your final master files are located.
+DATA_DIRECTORY = r'C:\projects\HONOURS'
+
+# --- UPDATED: Point to the files that include weather data ---
+MASTER_FILES = [
+    os.path.join(DATA_DIRECTORY, 'New South Wales_master_with_weather.csv'),
+    os.path.join(DATA_DIRECTORY, 'Queensland_master_with_weather.csv'),
+    os.path.join(DATA_DIRECTORY, 'Victoria_master_with_weather.csv')
+]
+
+# Create an output directory for the plots if it doesn't exist
+OUTPUT_DIRECTORY = os.path.join(DATA_DIRECTORY, 'plots')
+if not os.path.exists(OUTPUT_DIRECTORY):
+    os.makedirs(OUTPUT_DIRECTORY)
+    print(f"Created directory for plots at: {OUTPUT_DIRECTORY}")
+
+
+def plot_all_time_series(filepath):
     """
-    Reads a CSV file and creates a time series plot of a specified column.
-
-    Args:
-        csv_filepath (str): The full path to the input CSV file.
-        date_column (str): The name of the column containing datetime information.
-        value_column (str): The name of the column containing the data to plot.
+    Loads a master data file and creates a separate time series plot for each
+    numerical column against the DateTime index. This will now include weather data.
     """
-    # --- File Validation ---
-    if not os.path.exists(csv_filepath):
-        print(f"Error: The file '{csv_filepath}' was not found.")
-        return
-
-    print(f"Processing file: {csv_filepath}")
+    state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
+    print(f"\n--- Generating Individual Time Series Plots for: {state_name} ---")
 
     try:
-        # --- Data Loading and Preparation ---
-        # Read the CSV file into a pandas DataFrame
-        df = pd.read_csv(csv_filepath)
+        # Load the data with DateTime as the index
+        df = pd.read_csv(filepath, index_col='DateTime', parse_dates=True)
 
-        # Check if the required columns exist in the DataFrame
-        if date_column not in df.columns:
-            print(f"Error: Date column '{date_column}' not found in the CSV file.")
-            return
-        if value_column not in df.columns:
-            print(f"Error: Value column '{value_column}' not found in the CSV file.")
-            return
+        # Loop through each column in the DataFrame
+        for column in df.columns:
+            # Skip non-numeric columns if any exist
+            if not pd.api.types.is_numeric_dtype(df[column]):
+                continue
 
-        # Convert the 'SETTLEMENTDATE' column to datetime objects
-        # The errors='coerce' argument will turn any unparseable dates into NaT (Not a Time)
-        df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
+            print(f"  - Plotting {column}...")
 
-        # Drop rows where the date could not be parsed
-        df.dropna(subset=[date_column], inplace=True)
+            # --- Plotting ---
+            plt.style.use('seaborn-v0_8-whitegrid')
+            fig, ax = plt.subplots(figsize=(15, 7))
 
-        # Set the datetime column as the index of the DataFrame
-        # This is a key step for creating a time series
-        df.set_index(date_column, inplace=True)
+            ax.plot(df.index, df[column], label=column, linewidth=1)
 
-        # Sort the data by date to ensure the plot is in chronological order
-        df.sort_index(inplace=True)
+            # --- Formatting ---
+            ax.set_title(f'Time Series of {column} for {state_name}', fontsize=16, fontweight='bold')
+            ax.set_xlabel('Date and Time', fontsize=12)
+            ax.set_ylabel(f'{column}', fontsize=12)
+            fig.autofmt_xdate()
+            ax.legend()
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+            plt.tight_layout()
 
-        print(f"Successfully loaded and processed {len(df)} data points.")
+            # --- Saving ---
+            # Sanitize column name for use in filename
+            safe_col_name = column.replace(' ', '_').replace('(', '').replace(')', '').replace('-', '').replace('/', '')
+            output_filename = f"{state_name}_timeseries_{safe_col_name}.png"
+            output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
 
-        # --- Plotting ---
-        plt.style.use('seaborn-v0_8-whitegrid')  # Using a nice style for the plot
-        fig, ax = plt.subplots(figsize=(15, 7))  # Create a figure and axes for plotting
+            plt.savefig(output_path, dpi=200)
+            plt.close(fig)  # Close the figure to free up memory
 
-        # Plot the specified value column against the index (which is our datetime)
-        ax.plot(df.index, df[value_column], label=value_column, color='dodgerblue', linewidth=1.5)
-
-        # --- Formatting the Plot ---
-        # Set the title and labels for the axes
-        region_name = os.path.basename(csv_filepath).split('_')[0]
-        ax.set_title(f'Time Series of {value_column} for {region_name}', fontsize=16,
-                     fontweight='bold')
-        ax.set_xlabel('Date and Time', fontsize=12)
-        ax.set_ylabel(f'{value_column} ($/MWh)', fontsize=12)
-
-        # Improve the formatting of the date labels on the x-axis
-        fig.autofmt_xdate()
-
-        # Add a legend and grid for better readability
-        ax.legend()
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-
-        # Add a tight layout
-        plt.tight_layout()
-
-        # --- Saving and Displaying the Plot ---
-        # Create an output filename based on the input file
-        output_filename = f"{os.path.splitext(os.path.basename(csv_filepath))[0]}_timeseries.png"
-
-        # Save the plot to a PNG file
-        plt.savefig(output_filename, dpi=300)
-        print(f"Plot successfully saved as '{output_filename}'")
-
-        # Display the plot
-        plt.show()
+        print(f"✅ All individual time series plots for {state_name} saved successfully.")
 
     except Exception as e:
-        print(f"An error occurred while processing the file: {e}")
+        print(f"❌ An error occurred while generating time series plots for {state_name}: {e}")
 
 
-if __name__ == '__main__':
-    # --- Configuration ---
-    # Specify the CSV file you want to analyze.
-    # This should be one of the files created by the previous script.
-    # For example: 'NSW_PRICE_DEMAND_AEMO_combined.csv'
+def plot_combined_time_series(filepath):
+    """
+    Loads a master data file and plots generation and price columns on a single
+    time series chart, using a secondary y-axis for RRP.
+    """
+    state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
+    print(f"\n--- Generating Combined Generation vs. Price Plot for: {state_name} ---")
 
-    input_csv = r'C:\projects\HONOURS\AEMO_combined_price\QLD_PRICE_DEMAND_AEMO_combined.csv'
+    try:
+        # Load the data with DateTime as the index
+        df = pd.read_csv(filepath, index_col='DateTime', parse_dates=True)
 
-    # Specify the columns you want to plot.
-    # 'SETTLEMENTDATE' is the time column.
-    # For the value, you could use 'RRP' (Regional Reference Price) or 'TOTALDEMAND'.
-    date_col = 'SETTLEMENTDATE'
-    value_col_to_plot = 'RRP'  # You can change this to 'TOTALDEMAND' or another relevant column
+        plt.style.use('seaborn-v0_8-whitegrid')
+        fig, ax1 = plt.subplots(figsize=(18, 8))
 
-    # --- Execution ---
-    # Call the function with your specified configuration
-    create_time_series_plot(input_csv, date_column=date_col, value_column=value_col_to_plot)
+        # Create a secondary y-axis for the RRP data
+        ax2 = ax1.twinx()
+
+        color_map = {
+            'Wind': 'deepskyblue',
+            'Solar (Utility)': 'green',
+            'Solar (Rooftop)': 'gold'
+        }
+
+        lines, labels = [], []
+
+        # Plot generation data on the primary axis (ax1)
+        for column in df.columns:
+            if 'RRP' not in column and 'MW' in column and pd.api.types.is_numeric_dtype(df[column]):
+                plot_color = 'gray'
+                if 'Wind' in column:
+                    plot_color = color_map['Wind']
+                elif 'Solar (Utility)' in column:
+                    plot_color = color_map['Solar (Utility)']
+                elif 'Solar (Rooftop)' in column:
+                    plot_color = color_map['Solar (Rooftop)']
+
+                line = ax1.plot(df.index, df[column], label=column, color=plot_color, linewidth=1.5)
+                lines.extend(line)
+
+        # Plot RRP data on the secondary axis (ax2)
+        if 'RRP' in df.columns:
+            line = ax2.plot(df.index, df['RRP'], label='RRP', color='red', linestyle='--', linewidth=2)
+            lines.extend(line)
+
+        # --- Formatting ---
+        ax1.set_title(f'Combined Generation vs. Price for {state_name}', fontsize=18, fontweight='bold')
+        ax1.set_xlabel('Date and Time', fontsize=12)
+        ax1.set_ylabel('Generation (MW)', fontsize=12, color='blue')
+        ax2.set_ylabel('RRP ($/MWh)', fontsize=12, color='red')
+
+        ax1.tick_params(axis='y', labelcolor='blue')
+        ax2.tick_params(axis='y', labelcolor='red')
+
+        labels = [l.get_label() for l in lines]
+        ax1.legend(lines, labels, loc='upper left')
+
+        fig.autofmt_xdate()
+        plt.tight_layout()
+
+        # --- Saving ---
+        output_filename = f"{state_name}_timeseries_gen_vs_price.png"
+        output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
+
+        plt.savefig(output_path, dpi=300)
+        plt.close(fig)
+
+        print(f"✅ Combined generation vs. price plot for {state_name} saved successfully.")
+
+    except Exception as e:
+        print(f"❌ An error occurred while generating the combined plot for {state_name}: {e}")
+
+
+def plot_correlation_heatmap(filepath):
+    """
+    Loads a master data file, calculates the correlation matrix for all numeric
+    columns (including weather), and plots it as a Seaborn heatmap.
+    """
+    state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
+    print(f"\n--- Generating Full Correlation Heatmap for: {state_name} ---")
+
+    try:
+        # Load the data
+        df = pd.read_csv(filepath)
+
+        # Select only numeric columns for correlation calculation
+        numeric_df = df.select_dtypes(include='number')
+
+        # Calculate the correlation matrix
+        correlation_matrix = numeric_df.corr()
+
+        # --- Plotting ---
+        plt.style.use('seaborn-v0_8-whitegrid')
+        # Increase the figure size to accommodate more variables
+        plt.figure(figsize=(16, 14))
+
+        heatmap = sns.heatmap(
+            correlation_matrix,
+            annot=True,  # Show the correlation values on the map
+            fmt='.2f',  # Format values to two decimal places
+            cmap='coolwarm',  # Use a diverging color map
+            linewidths=.5,
+            annot_kws={"size": 8}  # Adjust font size for annotations
+        )
+
+        # --- Formatting ---
+        heatmap.set_title(f'Full Correlation Matrix for {state_name}', fontsize=18, pad=20)
+        plt.xticks(rotation=45, ha='right')
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+
+        # --- Saving ---
+        output_filename = f"{state_name}_full_correlation_heatmap.png"
+        output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
+
+        plt.savefig(output_path, dpi=300)
+        plt.close()  # Close the figure
+
+        print(f"✅ Full correlation heatmap for {state_name} saved successfully.")
+
+    except Exception as e:
+        print(f"❌ An error occurred while generating the correlation heatmap for {state_name}: {e}")
+
+
+# --- Main Execution Block ---
+if __name__ == "__main__":
+    for master_file in MASTER_FILES:
+        if os.path.exists(master_file):
+            plot_all_time_series(master_file)
+            plot_combined_time_series(master_file)
+            plot_correlation_heatmap(master_file)
+        else:
+            print(f"\n⚠️ WARNING: Master file not found at '{master_file}'. Skipping.")
+
+    print("\n--- All analysis and plotting complete. ---")

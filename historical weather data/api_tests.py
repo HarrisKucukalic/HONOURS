@@ -14,6 +14,64 @@ END_DATE = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 TIMEZONE = "Australia/Sydney"
 INPUT_EXCEL_FILE = "Wind & Solar Gen. Open Elec.xlsx"
 OUTPUT_DIRECTORY = "historical weather data"
+
+STATE_COORDINATES = {
+    "NSW": {"lat": -33.87, "long": 151.21},
+    "QLD": {"lat": -27.47, "long": 153.03},
+    "VIC": {"lat": -37.81, "long": 144.96}
+}
+
+
+def pull_weather_data(state_name, start_date, end_date, lat, long):
+    """
+    Fetches historical weather data from the Open-Meteo API for a given location and date range.
+    """
+    print(f"--> Pulling data for {state_name} from {start_date} to {end_date}...")
+
+    try:
+        # Construct the API URL
+        api_url = (
+            f"https://archive-api.open-meteo.com/v1/archive?"
+            f"latitude={lat}&longitude={long}&start_date={start_date}&end_date={end_date}"
+            f"&hourly={HOURLY_VARIABLES}"
+            f"&timezone={TIMEZONE}"
+        )
+
+        # Make the API request
+        response = requests.get(api_url)
+        response.raise_for_status()  # This will raise an error for bad responses (4xx or 5xx)
+        data = response.json()
+
+        # Convert the 'hourly' data into a pandas DataFrame
+        df = pd.DataFrame(data.get('hourly', {}))
+
+        if df.empty:
+            print("  - No new data found for this period.")
+            return pd.DataFrame()
+
+        # Convert the 'time' column to datetime objects
+        df['time'] = pd.to_datetime(df['time'])
+        df.set_index('time', inplace=True)
+
+        # Rename columns to be more descriptive
+        df.rename(columns={
+            'temperature_2m': 'Temp (°C)',
+            'surface_pressure': 'Pressure (hPa)',
+            'cloud_cover': 'Cloud Cover (%)',
+            'wind_speed_10m': 'Wind Speed 10m (km/h)',
+            'wind_speed_100m': 'Wind Speed 100m (km/h)',
+            'shortwave_radiation': 'Solar GHI (W/m²)',
+            'direct_normal_irradiance': 'Solar DNI (W/m²)'
+        }, inplace=True)
+
+        print(f"✅ Successfully received {len(df)} new data points for {state_name}.")
+        return df
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ An error occurred fetching data for {state_name}: {e}")
+        return pd.DataFrame()
+
+
 def pull_hist_weather_data(start_date, end_date, lat, long):
     print(f"--> Pulling Historical Data for Lat: {lat} & Long: {long}")
     hist_df = pd.DataFrame()
@@ -187,5 +245,63 @@ def main():
         print(f"--- ✅ Finished updating file: {output_filepath} ---")
 
 
+def main_states():
+    """
+    Main function to create or update historical weather data files for each state.
+    """
+    # --- 1. SETUP ---
+    os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
+    print(f"Output will be saved to the '{OUTPUT_DIRECTORY}' directory.")
+
+    # --- 2. PROCESSING LOOP ---
+    for state, coords in STATE_COORDINATES.items():
+        print(f"\n--- Processing State: {state} ---")
+
+        output_filepath = os.path.join(OUTPUT_DIRECTORY, f"{state}_weather_data.csv")
+        start_date = INITIAL_START_DATE
+        df_existing = None
+
+        # Check if a data file for this state already exists.
+        if os.path.exists(output_filepath):
+            print(f"  - Found existing file: '{os.path.basename(output_filepath)}'.")
+            try:
+                df_existing = pd.read_csv(output_filepath, index_col=0, parse_dates=True)
+                if not df_existing.empty:
+                    # If the file exists and has data, set the new start date to the day
+                    # after the last recorded date to avoid downloading duplicates.
+                    last_date = df_existing.index.max()
+                    start_date = (last_date + timedelta(days=1)).strftime('%Y-%m-%d')
+            except Exception as e:
+                print(f"  - ⚠️ Could not read existing file. Will create a new one. Error: {e}")
+
+        # Only proceed if the start date is not after the end date
+        if start_date > END_DATE:
+            print("  - Data is already up to date. No new data to pull.")
+            continue
+
+        # Fetch new data from the API
+        df_new = pull_weather_data(
+            state_name=state,
+            start_date=start_date,
+            end_date=END_DATE,
+            lat=coords['lat'],
+            long=coords['long']
+        )
+
+        # Combine and save the data
+        if not df_new.empty:
+            if df_existing is not None:
+                # If there was existing data, concatenate the old and new dataframes.
+                df_combined = pd.concat([df_existing, df_new])
+            else:
+                # Otherwise, the new dataframe is our combined dataframe.
+                df_combined = df_new
+
+            # Save the final result to a CSV file.
+            df_combined.to_csv(output_filepath, index_label='DateTime')
+            print(f"  - ✅ Successfully updated file: {os.path.basename(output_filepath)}")
+
+    print("\n--- All states processed. ---")
+
 if __name__ == "__main__":
-    main()
+    main_states()
