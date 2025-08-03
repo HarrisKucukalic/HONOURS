@@ -1,9 +1,7 @@
 import pandas as pd
 import os
 import random
-# --- Configuration ---
 
-# List of the final combined files to process.
 FILENAMES = [
     r'C:\projects\HONOURS\New South Wales_final.csv',
     r'C:\projects\HONOURS\Queensland_final.csv',
@@ -27,17 +25,17 @@ STATE_FILES_TO_MERGE = {
 
 
 # Columns to check for low generation.
-# Make sure these names exactly match the columns in your CSV files.
 COLUMNS_TO_CHECK = [
     'Wind -  MW', 'Solar (Utility) -  MW', 'Solar (Rooftop) -  MW'
 ]
 
 # The threshold for daily generation. If the sum of the checked columns for a
 # day is below this value, it will be considered a "low-generation" day.
-# The unit is the sum of average MW over the day. 100 is a reasonable starting point.
+
 LOW_GENERATION_THRESHOLD = 100
 
 DATA_DIRECTORY = r'C:\projects\HONOURS'
+
 
 def correct_low_generation_days():
     """
@@ -45,17 +43,17 @@ def correct_low_generation_days():
     and replaces their data with a varied pattern based on the average of all
     previous valid days.
     """
-    print("--- Starting Low-Generation Data Correction Process ---")
+    print("Starting Low-Generation Data Correction Process")
 
     for filepath in FILENAMES:
         if not os.path.exists(filepath):
             print(f"\n⚠️ WARNING: File not found at '{filepath}'. Skipping.")
             continue
 
-        print(f"\n--- Processing file: {os.path.basename(filepath)} ---")
+        print(f"\nProcessing file: {os.path.basename(filepath)} ---")
 
         try:
-            # 1. Load the data
+            # Load data
             df = pd.read_csv(filepath)
             df['DateTime'] = pd.to_datetime(df['DateTime'])
             df.set_index('DateTime', inplace=True)
@@ -70,12 +68,11 @@ def correct_low_generation_days():
                     f"⚠️ WARNING: None of the specified columns to check were found in {os.path.basename(filepath)}. Skipping.")
                 continue
 
-            # --- Create a complete index to handle missing periods ---
-            print("  - Creating a complete 5-minute timeline to find gaps...")
+            print("Creating a complete 5-minute timeline to find gaps.")
             full_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='5min')
             df_reindexed = df.reindex(full_index)
 
-            # 2. Identify days to be corrected (low generation OR missing data)
+            # Identify days to be corrected (low generation OR missing data)
             daily_sums = df_reindexed[actual_cols_to_check].resample('D').sum()
             daily_counts = df_reindexed[actual_cols_to_check].resample('D').count().sum(axis=1)
             daily_total_gen = daily_sums.sum(axis=1)
@@ -91,7 +88,7 @@ def correct_low_generation_days():
 
             print(f"Found {len(dates_to_correct)} days with low generation or missing data to correct.")
 
-            # 3. Correct the data using a "running average" logic
+            # Correct the data using a "running average" logic
             df_corrected = df_reindexed.copy()
 
             # Create a DataFrame to hold the running sums, indexed by time of day
@@ -108,7 +105,7 @@ def correct_low_generation_days():
                 if is_day_to_correct:
                     # This is a "bad" day
                     if good_day_count > 0:
-                        print(f"  - Correcting {current_date} using average of previous {good_day_count} good days.")
+                        print(f"Correcting {current_date} using average of previous {good_day_count} good days.")
 
                         average_pattern = running_sums / good_day_count
                         scaling_factor = random.uniform(0.85, 1.15)
@@ -122,7 +119,7 @@ def correct_low_generation_days():
                         corrected_days_count += 1
                     else:
                         print(
-                            f"  - Skipping correction for {current_date}: No previous good day found to create an average.")
+                            f"Skipping correction for {current_date}: No previous good day found to create an average.")
                 else:
                     # This is a "good" day, so we update the running sums
                     good_day_data = df_corrected.loc[df_corrected.index.date == current_date, actual_cols_to_check]
@@ -132,11 +129,10 @@ def correct_low_generation_days():
 
             print(f"\nCorrected a total of {corrected_days_count} days.")
 
-            # --- NEW: Forward-fill all other columns to ensure no gaps remain ---
-            print("  - Forward-filling all columns to ensure data continuity...")
+            print("Forward-filling all columns to ensure data continuity.")
             df_corrected.ffill(inplace=True)
 
-            # 4. Save the final result
+            # Save the final result
             output_path = filepath.replace('_final.csv', '_corrected.csv')
             df_corrected.to_csv(output_path, index_label='DateTime')
             print(f"✅ Successfully saved corrected data to '{os.path.basename(output_path)}'")
@@ -144,14 +140,14 @@ def correct_low_generation_days():
         except Exception as e:
             print(f"❌ An unexpected error occurred while processing {os.path.basename(filepath)}: {e}")
 
-    print("\n--- All files processed. ---")
+    print("\nAll files processed.")
 
 def combine_with_price_demand():
     """
     Combines the corrected generation data with the RRP column from the
     price and demand data files.
     """
-    print("\n--- Starting Final Combination with Price/Demand Data ---")
+    print("\nStarting Final Combination with Price/Demand Data")
 
     # Define the files to be combined for each state
     state_files = {
@@ -173,14 +169,14 @@ def combine_with_price_demand():
         print(f"\n--- Combining data for: {state} ---")
 
         try:
-            # 1. Load both datasets
+            # Load both datasets
             df_gen = pd.read_csv(paths['corrected_gen'], index_col='DateTime', parse_dates=True)
             df_price = pd.read_csv(paths['price_demand'])  # Load without setting index first
 
             print(f"  - Loaded '{os.path.basename(paths['corrected_gen'])}'")
             print(f"  - Loaded '{os.path.basename(paths['price_demand'])}'")
 
-            # 2. Prepare the price/demand dataframe
+            # Prepare the price/demand dataframe
             # Rename 'SETTLEMENTDATE' to 'DateTime' to match the other file
             if 'SETTLEMENTDATE' in df_price.columns:
                 df_price.rename(columns={'SETTLEMENTDATE': 'DateTime'}, inplace=True)
@@ -197,18 +193,18 @@ def combine_with_price_demand():
 
             # Keep only the 'RRP' column
             df_price_filtered = df_price[['RRP']]
-            print(f"  - Isolated the 'RRP' column from the price/demand file.")
+            print(f"Isolated the 'RRP' column from the price/demand file.")
 
-            # 3. Merge the two dataframes on their DateTime index
+            # Merge the two dataframes on their DateTime index
             # A left merge ensures the complete timeline from the corrected file is used.
             df_master = pd.merge(df_gen, df_price_filtered, left_index=True, right_index=True, how='left')
-            print(f"  - Merged generation data with RRP data. Final shape: {df_master.shape}")
+            print(f"Merged generation data with RRP data. Final shape: {df_master.shape}")
 
-            # 4. Forward-fill any gaps that might have been created in the RRP column
+            # Forward-fill any gaps that might have been created in the RRP column
             df_master['RRP'] = df_master['RRP'].ffill()
-            print("  - Forward-filled any remaining gaps in the RRP column.")
+            print("Forward-filled any remaining gaps in the RRP column.")
 
-            # 5. Save the final master file
+            # Save the final master file
             output_path = os.path.join(DATA_DIRECTORY, f'{state}_master.csv')
             df_master.to_csv(output_path, index_label='DateTime')
             print(f"✅ Successfully saved master data to '{os.path.basename(output_path)}'")
@@ -223,10 +219,10 @@ def resample_and_merge_weather():
     Loads master data and hourly weather data, resamples the weather data to
     5-minute intervals, and merges them into a final file.
     """
-    print("--- Starting Weather Data Resampling and Merging Process ---")
+    print("Starting Weather Data Resampling and Merging Process")
 
     for state, paths in STATE_FILES_TO_MERGE.items():
-        print(f"\n--- Processing: {state} ---")
+        print(f"\nProcessing: {state}")
 
         master_filepath = paths['master_file']
         weather_filepath = paths['weather_file']
@@ -241,32 +237,30 @@ def resample_and_merge_weather():
             continue
 
         try:
-            # 1. Load the master and weather data files
+            # Load the master and weather data files
             # Both files should have a 'DateTime' index after being parsed.
             df_master = pd.read_csv(master_filepath, index_col='DateTime', parse_dates=True)
             df_weather_hourly = pd.read_csv(weather_filepath, index_col='DateTime', parse_dates=True)
 
-            print(f"  - Loaded '{os.path.basename(master_filepath)}' ({len(df_master)} rows)")
-            print(f"  - Loaded '{os.path.basename(weather_filepath)}' ({len(df_weather_hourly)} rows)")
+            print(f"Loaded '{os.path.basename(master_filepath)}' ({len(df_master)} rows)")
+            print(f"Loaded '{os.path.basename(weather_filepath)}' ({len(df_weather_hourly)} rows)")
 
-            # 2. Resample the hourly weather data to 5-minute intervals
+            # Resample the hourly weather data to 5-minute intervals
             # 'ffill()' (forward-fill) carries the hourly value (e.g., 12:00) forward
             # to fill the 5-minute intervals (12:05, 12:10, ..., 12:55).
-            print("  - Resampling hourly weather data to 5-minute intervals...")
+            print("Resampling hourly weather data to 5-minute intervals.")
             df_weather_5min = df_weather_hourly.resample('5min').ffill()
 
-            # 3. Merge the 5-minute weather data with the master file
-            # A 'left' merge ensures we keep all the data from the master file and add
-            # weather data where the 'DateTime' index matches.
-            print("  - Merging master data with resampled weather data...")
+            # Merge the 5-minute weather data with the master file
+            print("Merging master data with resampled weather data...")
             df_final = pd.merge(df_master, df_weather_5min, left_index=True, right_index=True, how='left')
 
-            # 4. Forward-fill any remaining gaps in the newly merged weather columns
+            # Forward-fill any remaining gaps in the newly merged weather columns
             # This handles cases where the master file might start slightly before the weather data.
             df_final[df_weather_5min.columns] = df_final[df_weather_5min.columns].ffill()
-            print(f"  - Merged data. Final shape: {df_final.shape}")
+            print(f"Merged data. Final shape: {df_final.shape}")
 
-            # 5. Save the final, combined file
+            # Save the final, combined file
             output_filename = f"{state}_master_with_weather.csv"
             output_path = os.path.join(DATA_DIRECTORY, output_filename)
             df_final.to_csv(output_path, index_label='DateTime')
@@ -275,7 +269,7 @@ def resample_and_merge_weather():
         except Exception as e:
             print(f"❌ An unexpected error occurred while processing {state}: {e}")
 
-    print("\n--- All states processed. ---")
+    print("\nAll states processed.")
 
 if __name__ == "__main__":
     # correct_low_generation_days()

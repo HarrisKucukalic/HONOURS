@@ -2,16 +2,12 @@ import pandas as pd
 import folium
 import os
 
-# --- Configuration ---
-
 # The name of your Excel file containing the facility data.
 INPUT_EXCEL_FILE = "Wind & Solar Gen. Open Elec.xlsx"
 
 # The name of the output HTML file for the map.
 OUTPUT_MAP_FILE = "facility_map.html"
 
-
-# --- Main Map Creation Function ---
 
 def create_facility_map():
     """
@@ -20,7 +16,7 @@ def create_facility_map():
     """
     print("--- Starting Interactive Map Generation ---")
 
-    # --- 1. Load Data ---
+    # Load Data
     try:
         # Load the Excel file
         xls_source = pd.ExcelFile(INPUT_EXCEL_FILE)
@@ -33,20 +29,18 @@ def create_facility_map():
         print(f"❌ An error occurred while reading the Excel file: {e}")
         return
 
-    # --- 2. Initialize the Map ---
-    # Centered roughly on the middle of Australia.
-    # You can adjust the location and zoom_start as needed.
+    # Initialise the Map
+    # Centered roughly in the middle of Australia.
     facility_map = folium.Map(location=[-25.27, 133.77], zoom_start=4)
     print("Map initialized.")
 
-    # --- 3. Process Each Sheet and Add Markers ---
+    # Process Each Sheet and Add Markers
     # Loop through all sheets in the Excel file.
     for sheet_name in xls_source.sheet_names:
         print(f"\nProcessing sheet: '{sheet_name}'...")
 
-        # --- Parse State and Technology from the sheet name ---
+        # Parse State and Technology from the sheet name
         try:
-            # Assumes format "State-Technology" e.g., "Victoria-Wind"
             state, tech = sheet_name.split('-')
             # Clean up the parsed strings to remove any extra whitespace
             state = state.strip()
@@ -73,7 +67,7 @@ def create_facility_map():
                     print(f"⚠️  Skipping '{name}' due to missing coordinates.")
                     continue
 
-                # Create the HTML for the popup window, which is common for all markers
+                # Create the HTML for the popup window
                 popup_html = f"""
                 <b>Name:</b> {name}<br>
                 <b>Technology:</b> {tech}<br>
@@ -83,7 +77,6 @@ def create_facility_map():
                 iframe = folium.IFrame(popup_html, width=250, height=100)
                 popup = folium.Popup(iframe, max_width=250)
 
-                # --- 4. Customize and Add Marker ---
                 # Assign a marker based on the technology type parsed from the sheet name
                 if 'WIND' in tech:
                     # Use a blue cloud icon for Wind facilities
@@ -113,7 +106,7 @@ def create_facility_map():
             except Exception as e:
                 print(f"❌ Error processing row {index} in sheet '{sheet_name}': {e}")
 
-    # --- 5. Save Map to HTML File ---
+    # Save Map to HTML File
     try:
         facility_map.save(OUTPUT_MAP_FILE)
         print(f"\n--- ✅ Successfully created map! ---")
@@ -122,8 +115,6 @@ def create_facility_map():
         print(f"\n❌ An error occurred while saving the map: {e}")
 
 
-# --- Run the script ---
+# Run the script
 if __name__ == "__main__":
-    # Before running, make sure you have the required libraries installed:
-    # pip install pandas openpyxl folium
     create_facility_map()

@@ -3,7 +3,7 @@ import os
 
 def merge_csv_files_in_directory(directory_path):
     """
-    Merges all CSV files in a given directory into a single CSV file,
+    Merges all AEMO Price/Demand files into a single CSV file,
     removing duplicate rows based on the 'SETTLEMENTDATE' column.
 
     Args:
@@ -36,9 +36,9 @@ def merge_csv_files_in_directory(directory_path):
             # Read each CSV file and append its content to the list
             df = pd.read_csv(file_path)
             df_list.append(df)
-            print(f"  - Reading {file}...")
+            print(f"Reading {file}...")
         except Exception as e:
-            print(f"    - Could not read file {file}. Error: {e}")
+            print(f"Could not read file {file}. Error: {e}")
 
     # Concatenate all dataframes in the list into a single dataframe
     if not df_list:
@@ -52,7 +52,7 @@ def merge_csv_files_in_directory(directory_path):
     # Check if the key column for deduplication exists
     if 'SETTLEMENTDATE' not in merged_df.columns:
         print(f"Error: 'SETTLEMENTDATE' column not found. Cannot deduplicate.")
-        # Decide what to do if the column is missing. For now, we'll save the merged file without deduplication.
+        # Save the merged file without deduplication if an error occurs.
         output_filename = f"{os.path.basename(directory_path)}_combined_no_dedupe.csv"
     else:
         print(f"Original row count: {len(merged_df)}")

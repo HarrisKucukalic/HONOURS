@@ -2,10 +2,9 @@ import pandas as pd
 import os
 import glob
 
-# --- Configuration ---
+
 
 # Keywords to identify states and group files.
-# Using the full state names as provided in your code.
 STATES = ['Victoria', 'New South Wales', 'Queensland']
 
 # List of keywords to identify columns for dropping.
@@ -25,11 +24,11 @@ def combine_and_clean_by_state():
     Finds all CSV files, groups them by state, combines them,
     drops specified columns, and saves a new summary file for each state.
     """
-    print("--- Starting State Data Combination and Cleaning ---")
+    print("Starting State Data Combination and Cleaning")
 
     # Loop through each state we want to process
     for state in STATES:
-        print(f"\n--- Processing state: {state} ---")
+        print(f"\nProcessing state: {state}")
 
         # Find all .csv files in the directory that contain the state's name
         search_pattern = os.path.join(SOURCE_DIRECTORY, f"*{state}*.csv")
@@ -47,12 +46,8 @@ def combine_and_clean_by_state():
         # Read each file and append its DataFrame to the list
         for filename in file_list:
             try:
-                # Read the file, keeping the index as text for now.
+                # Read the file
                 df = pd.read_csv(filename, index_col=0)
-
-                # --- FIX: Explicitly convert index to datetime objects ---
-                # This is more robust and handles different date formats.
-                # 'coerce' will turn any unparseable dates into NaT (Not a Time).
                 df.index = pd.to_datetime(df.index, errors='coerce')
 
                 # Drop any rows where the date could not be parsed.
@@ -61,12 +56,12 @@ def combine_and_clean_by_state():
 
                 if original_rows > len(df):
                     print(
-                        f"    - Dropped {original_rows - len(df)} rows from '{os.path.basename(filename)}' due to unparseable dates.")
+                        f"Dropped {original_rows - len(df)} rows from '{os.path.basename(filename)}' due to unparseable dates.")
 
                 if not df.empty:
                     list_of_dfs.append(df)
                 else:
-                    print(f"    - File '{os.path.basename(filename)}' was empty after cleaning.")
+                    print(f"File '{os.path.basename(filename)}' was empty after cleaning.")
 
             except Exception as e:
                 print(f"⚠️ Could not read or process file '{filename}'. Error: {e}")
@@ -101,9 +96,8 @@ def combine_and_clean_by_state():
         combined_df.to_csv(output_filename, index_label='DateTime')
         print(f"✅ Successfully saved combined data to '{output_filename}'")
 
-    print("\n--- All states processed. ---")
+    print("\nAll states processed.")
 
 
-# --- Run the script ---
 if __name__ == "__main__":
     combine_and_clean_by_state()

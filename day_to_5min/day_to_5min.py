@@ -2,9 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 
-# --- Configuration ---
-
-# List of files to process. Add more filenames to this list as needed.
+# List of files to process.
 FILENAMES = [
     r'C:\projects\HONOURS\day_to_5min\20240703 New South Wales.csv',
     r'C:\projects\HONOURS\day_to_5min\20240703 Queensland.csv',
@@ -17,12 +15,10 @@ KEYWORDS_TO_DROP = [
     'Distillate', 'Gas', 'Hydro', 'Emissions', 'Volume', 'Net'
 ]
 
-# --- Profile Generation Functions ---
-
 def generate_solar_profile(intervals_per_day=288):
     """
     Generates a realistic "bell curve" daily profile for solar generation.
-    The profile is normalized, so the sum of its values equals 1.
+    The profile is normalised, so the sum of its values equals 1.
     """
     # Create a time axis from 0 to 2*pi for a full day cycle
     time_axis = np.linspace(0, 2 * np.pi, intervals_per_day)
@@ -30,20 +26,20 @@ def generate_solar_profile(intervals_per_day=288):
     # The sine wave naturally models the rise and fall of the sun.
     profile = np.sin(time_axis - np.pi/2) + 1
     # Solar generation is zero at night, so clip values outside of daylight hours.
-    # We'll approximate this by setting the first and last quarters of the day to 0.
+    # This is approxmated by setting the first (early morning) and last (late evening) quarters of the day to 0.
     daylight_start = intervals_per_day // 4
     daylight_end = intervals_per_day * 3 // 4
     profile[:daylight_start] = 0
     profile[daylight_end:] = 0
-    # Normalize the profile so that it sums to 1
+    # Normalise the profile so that it sums to 1
     profile /= profile.sum()
     return profile
 
 
 def generate_wind_profile(intervals_per_day=288):
     """
-    Generates a plausible, fluctuating daily profile for wind generation.
-    This simulates the natural variability of wind. The profile is normalized.
+    Generates a fluctuating daily profile for wind generation.
+    This simulates the natural variability of wind.
     """
     random_steps = np.random.randn(intervals_per_day)
     profile_raw = pd.Series(random_steps).cumsum()
@@ -54,21 +50,20 @@ def generate_wind_profile(intervals_per_day=288):
     if profile.sum() > 0:
         profile /= profile.sum()
     else:
-        # Fallback to a flat profile if the sum is zero (highly unlikely)
+        # Fallback to a flat profile if the sum is zero
         return np.full(intervals_per_day, 1.0 / intervals_per_day)
 
     # Return a NumPy array to prevent index alignment issues
     return profile.values
 
-# --- Main Processing Function ---
 
 def process_energy_files():
     """
     Reads daily aggregated energy files, loops through each day,
-    disaggregates the data into 5-minute intervals using realistic profiles,
+    disaggregates the data into 5-minute intervals using realistic profiles (as above),
     converts units from daily GWh to average 5-minute MW, and saves the processed files.
     """
-    print("--- Starting Advanced Data Disaggregation ---")
+    print("Starting Advanced Data Disaggregation")
 
     solar_profile = generate_solar_profile()
     flat_profile = np.full(288, 1 / 288.0)
@@ -78,7 +73,7 @@ def process_energy_files():
             print(f"\n⚠️ WARNING: File '{filename}' not found. Skipping.")
             continue
 
-        print(f"\n--- Processing file: {filename} ---")
+        print(f"\nProcessing file: {filename}")
 
         try:
             df_daily = pd.read_csv(filename, index_col=0, parse_dates=True)
@@ -96,9 +91,9 @@ def process_energy_files():
             # This list will hold the processed 5-minute DataFrames for each day
             all_processed_days = []
 
-            # --- Loop through each day (each row) in the input file ---
+            # Loop through each day (each row) in the input file
             for current_date, daily_data_row in df_daily.iterrows():
-                print(f"  -> Processing data for {current_date.date()}")
+                print(f"Processing data for {current_date.date()}")
 
                 # Generate a new wind profile for each day to ensure variability
                 wind_profile = generate_wind_profile()
@@ -134,7 +129,7 @@ def process_energy_files():
 
                 all_processed_days.append(df_day_processed)
 
-            # 4. Concatenate all the daily DataFrames into one continuous time series
+            # Concatenate all the daily DataFrames into one continuous time series
             if not all_processed_days:
                 print("No data was processed. Output file will not be created.")
                 continue
@@ -147,7 +142,7 @@ def process_energy_files():
             df_final_processed.rename(columns=new_column_names, inplace=True)
             print("Updated column units from GWh to MW.")
 
-            # 5. Save the final processed DataFrame to a new CSV file
+            # Save the final processed DataFrame to a new CSV file
             base_name, extension = os.path.splitext(filename)
             new_filename = f"{base_name}_processed{extension}"
 

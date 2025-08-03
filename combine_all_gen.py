@@ -2,14 +2,9 @@ import pandas as pd
 import os
 import glob
 
-# --- Configuration ---
-
-# Cleaned column names for more robust matching (removed extra spaces)
 FINAL_COLUMNS = [
     'DateTime', 'Wind -  MW', 'Solar (Utility) -  MW', 'Solar (Rooftop) -  MW'
 ]
-
-# It's good practice to use relative paths or ensure this directory exists
 DATA_DIRECTORY = r'C:\projects\HONOURS'
 
 
@@ -18,7 +13,6 @@ def process_and_combine_state_data():
     Loads, filters, and combines historical and current data for each state,
     then saves the result to a new CSV file.
     """
-    # CORRECTED FILE NAMES
     state_files = {
         'New South Wales': {
             'hist': r'C:\projects\HONOURS\day_to_5min\20240703 New South Wales_processed.csv',
@@ -34,14 +28,13 @@ def process_and_combine_state_data():
         }
     }
 
-    print("--- Starting Data Merging and Saving Process ---")
+    print("Starting Data Merging and Saving Process.")
 
     for state, files in state_files.items():
-        print(f"\n--- Processing: {state} ---")
+        print(f"\nProcessing: {state}")
 
-        # --- 1. Load and Standardize the data files ---
+        # load daily that was converted and true 5-min data
         df_hist = pd.read_csv(files['hist'])
-        # df_hist.rename(columns={df_hist.columns[0]: 'DateTime'}, inplace=True)
         df_curr = pd.read_csv(files['curr'])
 
         print(df_hist.head())
@@ -52,12 +45,9 @@ def process_and_combine_state_data():
             print(f"⚠️  SKIPPING {state}: Could not load one or both data files.")
             continue
 
-        # --- 2. Diagnostic Prints ---
-        print(f"  - Historical data range: {df_hist['DateTime'].min()} to {df_hist['DateTime'].max()}")
-        print(f"  - Current data range:    {df_curr['DateTime'].min()} to {df_curr['DateTime'].max()}")
+        print(f"Historical data range: {df_hist['DateTime'].min()} to {df_hist['DateTime'].max()}")
+        print(f"Current data range:    {df_curr['DateTime'].min()} to {df_curr['DateTime'].max()}")
 
-        # --- 3. Filter and Combine ---
-        # Keep only the columns we need from each dataframe
         df_hist_filtered = df_hist[[col for col in FINAL_COLUMNS if col in df_hist.columns]]
         df_curr_filtered = df_curr[[col for col in FINAL_COLUMNS if col in df_curr.columns]]
 
@@ -77,7 +67,7 @@ def process_and_combine_state_data():
         combined_df.sort_values(by='DateTime', inplace=True)
         print(f"Combined data for {state}. Final shape: {combined_df.shape}")
 
-        # --- 4. Save the final result ---
+        # Save Results
         output_path = os.path.join(DATA_DIRECTORY, f'{state}_final.csv')
         combined_df.to_csv(output_path, index=False)
         print(f"✅ Successfully saved merged data to '{output_path}'")
@@ -85,6 +75,5 @@ def process_and_combine_state_data():
     print("\n--- All states processed. ---")
 
 
-# --- Run the script ---
 if __name__ == "__main__":
     process_and_combine_state_data()

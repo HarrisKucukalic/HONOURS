@@ -26,7 +26,7 @@ def pull_weather_data(state_name, start_date, end_date, lat, long):
     """
     Fetches historical weather data from the Open-Meteo API for a given location and date range.
     """
-    print(f"--> Pulling data for {state_name} from {start_date} to {end_date}...")
+    print(f"Pulling data for {state_name} from {start_date} to {end_date}.")
 
     try:
         # Construct the API URL
@@ -46,7 +46,7 @@ def pull_weather_data(state_name, start_date, end_date, lat, long):
         df = pd.DataFrame(data.get('hourly', {}))
 
         if df.empty:
-            print("  - No new data found for this period.")
+            print("No new data found for this period.")
             return pd.DataFrame()
 
         # Convert the 'time' column to datetime objects
@@ -115,8 +115,8 @@ def pull_hist_weather_data(start_date, end_date, lat, long):
 
 
 def pull_forecast_weather_data(lat, long):
-    # --- 2. GET HOURLY FORECAST DATA ---
-    print("\n--> Fetching hourly forecast data for the next 24 hours...")
+    # Retrieves Forecast Weather data
+    print("\n Fetching hourly forecast data for the next 24 hours.")
 
     try:
         # Construct the Forecast API URL with the new variables
@@ -162,7 +162,6 @@ def main():
     Main function to create or update historical weather data files.
     If a file exists, it appends new data. Otherwise, it creates a new file.
     """
-    # --- 1. SETUP ---
     os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
     print(f"Output will be saved to the '{OUTPUT_DIRECTORY}' directory.")
 
@@ -172,7 +171,7 @@ def main():
         print(f"❌ ERROR: Source file '{INPUT_EXCEL_FILE}' not found.")
         return
 
-    # --- 2. PROCESSING LOOP ---
+    # Processing loop
     for source_sheet_name in xls_source.sheet_names:
         print(f"\n--- Processing Main Sheet: {source_sheet_name} ---")
         df_locations = pd.read_excel(xls_source, sheet_name=source_sheet_name)
@@ -232,7 +231,7 @@ def main():
                     existing_data_sheets[sheet_name_safe] = df_new
                 print(f"Data for '{location_name}' updated.")
 
-        # --- 3. SAVE FILE ---
+        # Save Files
         # Write all sheets (old and new) back to the Excel file, overwriting it.
         if not existing_data_sheets:
             print(f"No data processed for '{source_sheet_name}'. File will not be created/updated.")
@@ -247,13 +246,12 @@ def main():
 
 def main_states():
     """
-    Main function to create or update historical weather data files for each state.
+    Main function to create or update historical weather data files for each QLD, NSW & VIC.
     """
-    # --- 1. SETUP ---
     os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
     print(f"Output will be saved to the '{OUTPUT_DIRECTORY}' directory.")
 
-    # --- 2. PROCESSING LOOP ---
+    # Processing Loop
     for state, coords in STATE_COORDINATES.items():
         print(f"\n--- Processing State: {state} ---")
 

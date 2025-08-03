@@ -3,19 +3,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# --- Configuration ---
-
-# Directory where your final master files are located.
 DATA_DIRECTORY = r'C:\projects\HONOURS'
 
-# --- Point to the files that include weather data ---
 MASTER_FILES = [
     os.path.join(DATA_DIRECTORY, 'New South Wales_master_with_weather.csv'),
     os.path.join(DATA_DIRECTORY, 'Queensland_master_with_weather.csv'),
     os.path.join(DATA_DIRECTORY, 'Victoria_master_with_weather.csv')
 ]
 
-# Create an output directory for the plots if it doesn't exist
 OUTPUT_DIRECTORY = os.path.join(DATA_DIRECTORY, 'plots')
 if not os.path.exists(OUTPUT_DIRECTORY):
     os.makedirs(OUTPUT_DIRECTORY)
@@ -28,7 +23,7 @@ def plot_all_time_series(filepath):
     numerical column against the DateTime index.
     """
     state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
-    print(f"\n--- Generating Individual Time Series Plots for: {state_name} ---")
+    print(f"\nGenerating Individual Time Series Plots for: {state_name}")
 
     try:
         df = pd.read_csv(filepath, index_col='DateTime', parse_dates=True)
@@ -41,7 +36,6 @@ def plot_all_time_series(filepath):
             fig, ax = plt.subplots(figsize=(18, 8))
             ax.plot(df.index, df[column], label=column, linewidth=1.5)
 
-            # --- Formatting with larger fonts ---
             ax.set_title(f'Time Series of {column} for {state_name}', fontsize=24, fontweight='bold')
             ax.set_xlabel('Date and Time', fontsize=20)
             ax.set_ylabel(f'{column}', fontsize=20)
@@ -52,7 +46,6 @@ def plot_all_time_series(filepath):
             ax.grid(True, which='both', linestyle='--', linewidth=0.5)
             plt.tight_layout()
 
-            # --- Saving ---
             safe_col_name = column.replace(' ', '_').replace('(', '').replace(')', '').replace('-', '').replace('/', '')
             output_filename = f"{state_name}_timeseries_{safe_col_name}.png"
             output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
@@ -71,7 +64,7 @@ def plot_rrp_time_series(filepath, y_max=300):
     y-axis to show typical variations more clearly.
     """
     state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
-    print(f"\n--- Generating Capped RRP Time Series Plot for: {state_name} ---")
+    print(f"\nGenerating Capped RRP Time Series Plot for: {state_name}")
 
     try:
         df = pd.read_csv(filepath, index_col='DateTime', parse_dates=True)
@@ -80,26 +73,22 @@ def plot_rrp_time_series(filepath, y_max=300):
             print(f"⚠️ WARNING: 'RRP' column not found in {state_name}'s file. Skipping RRP plot.")
             return
 
-        print(f"  - Plotting RRP with y-axis capped at {y_max}...")
+        print(f"Plotting RRP with y-axis capped at {y_max}.")
         plt.style.use('seaborn-v0_8-whitegrid')
         fig, ax = plt.subplots(figsize=(18, 8))
         ax.plot(df.index, df['RRP'], label='RRP', color='darkviolet', linewidth=1.5)
-
-        # --- Formatting with larger fonts ---
         ax.set_title(f'RRP Time Series for {state_name} (Capped at ${y_max}/MWh)', fontsize=24, fontweight='bold')
         ax.set_xlabel('Date and Time', fontsize=20)
         ax.set_ylabel('RRP ($/MWh)', fontsize=20)
         ax.tick_params(axis='both', labelsize=14)
         ax.legend(fontsize=14)
 
-        # Set the Y-axis limit
         ax.set_ylim(bottom=-50, top=y_max)
 
         fig.autofmt_xdate()
         ax.grid(True, which='both', linestyle='--', linewidth=0.5)
         plt.tight_layout()
 
-        # --- Saving ---
         output_filename = f"{state_name}_rrp_capped_timeseries.png"
         output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
         plt.savefig(output_path, dpi=300)
@@ -117,7 +106,7 @@ def plot_combined_time_series(filepath):
     time series chart, using a secondary y-axis for RRP.
     """
     state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
-    print(f"\n--- Generating Combined Generation vs. Price Plot for: {state_name} ---")
+    print(f"\nGenerating Combined Generation vs. Price Plot for: {state_name}")
 
     try:
         df = pd.read_csv(filepath, index_col='DateTime', parse_dates=True)
@@ -143,7 +132,6 @@ def plot_combined_time_series(filepath):
             line = ax2.plot(df.index, df['RRP'], label='RRP', color='red', linestyle='--', linewidth=2)
             lines.extend(line)
 
-        # --- Formatting with larger fonts ---
         ax1.set_title(f'Combined Generation vs. Price for {state_name}', fontsize=24, fontweight='bold')
         ax1.set_xlabel('Date and Time', fontsize=20)
         ax1.set_ylabel('Generation (MW)', fontsize=20, color='blue')
@@ -159,7 +147,6 @@ def plot_combined_time_series(filepath):
         fig.autofmt_xdate()
         plt.tight_layout()
 
-        # --- Saving ---
         output_filename = f"{state_name}_timeseries_gen_vs_price.png"
         output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
         plt.savefig(output_path, dpi=300)
@@ -184,22 +171,18 @@ def plot_correlation_heatmap(filepath):
         plt.style.use('seaborn-v0_8-whitegrid')
         plt.figure(figsize=(16, 14))
 
-        # --- UPDATED: Increase annotation font size ---
         heatmap = sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', linewidths=.5,
-                              annot_kws={"size": 10})
+                              annot_kws={"size": 14})
 
-        # --- Formatting with larger fonts ---
         heatmap.set_title(f'Full Correlation Matrix for {state_name}', fontsize=24, fontweight='bold', pad=20)
         plt.xticks(rotation=45, ha='right', fontsize=14)
         plt.yticks(rotation=0, fontsize=14)
 
-        # --- UPDATED: Increase color bar font size ---
         cbar = heatmap.collections[0].colorbar
         cbar.ax.tick_params(labelsize=14)
 
         plt.tight_layout()
 
-        # --- Saving ---
         output_filename = f"{state_name}_full_correlation_heatmap.png"
         output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
         plt.savefig(output_path, dpi=300)
@@ -208,16 +191,65 @@ def plot_correlation_heatmap(filepath):
     except Exception as e:
         print(f"❌ An error occurred while generating the correlation heatmap for {state_name}: {e}")
 
+def plot_negative_price_correlation_heatmap(filepath):
+    """
+    Filters data for periods of zero or negative RRP and plots a correlation
+    heatmap for those specific periods.
+    """
+    state_name = os.path.basename(filepath).replace('_master_with_weather.csv', '')
+    print(f"\nGenerating Correlation Heatmap for Zero/Negative Price Events in: {state_name}")
 
-# --- Main Execution Block ---
+    try:
+        df = pd.read_csv(filepath)
+
+        # Filter the DataFrame for rows where RRP is <= 0
+        df_negative_price = df[df['RRP'] <= 0].copy()
+
+        # Check if there's enough data to create a meaningful plot
+        if len(df_negative_price) < 10:
+            print(f"  - ⚠️ Insufficient data ({len(df_negative_price)} rows) for negative price correlation. Skipping.")
+            return
+
+        print(f"  - Analyzing {len(df_negative_price)} data points with zero or negative prices.")
+
+        numeric_df = df_negative_price.select_dtypes(include='number')
+        correlation_matrix = numeric_df.corr()
+
+        plt.style.use('seaborn-v0_8-whitegrid')
+        plt.figure(figsize=(16, 14))
+
+        heatmap = sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', linewidths=.5,
+                              annot_kws={"size": 14})
+
+        heatmap.set_title(f'Correlation Matrix During Zero/Negative Price Events for {state_name}', fontsize=24,
+                          fontweight='bold', pad=20)
+        plt.xticks(rotation=45, ha='right', fontsize=14)
+        plt.yticks(rotation=0, fontsize=14)
+
+        cbar = heatmap.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=14)
+
+        plt.tight_layout()
+
+        output_filename = f"{state_name}_negative_price_correlation_heatmap.png"
+        output_path = os.path.join(OUTPUT_DIRECTORY, output_filename)
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+        print(f"✅ Negative price correlation heatmap for {state_name} saved successfully.")
+    except Exception as e:
+        print(
+            f"❌ An unexpected error occurred while generating the negative price correlation heatmap for {state_name}: {e}")
+
+
 if __name__ == "__main__":
     for master_file in MASTER_FILES:
         if os.path.exists(master_file):
-            plot_all_time_series(master_file)
+            # plot_all_time_series(master_file)
             plot_rrp_time_series(master_file)
-            plot_combined_time_series(master_file)
-            plot_correlation_heatmap(master_file)
+            # plot_combined_time_series(master_file)
+            # plot_correlation_heatmap(master_file)
+            # plot_negative_price_correlation_heatmap(master_file)
         else:
             print(f"\n⚠️ WARNING: Master file not found at '{master_file}'. Skipping.")
 
-    print("\n--- All analysis and plotting complete. ---")
+    print("\nAll analysis and plotting complete.")
