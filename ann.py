@@ -10,7 +10,7 @@ print(f"Using device: {device}")
 class ANNModel(nn.Module):
     """A generic Artificial Neural Network (ANN) model for NEM price prediction using PyTorch."""
 
-    def __init__(self, region: str, input_shape: int):
+    def __init__(self, region: str, input_shape: int, dropout_rate: float = 0.3):
         """
         Initializes the ANN model.
         region: The NEM region for which the model is being trained.
@@ -18,24 +18,62 @@ class ANNModel(nn.Module):
         """
         super(ANNModel, self).__init__()
         self.region = region
-
+        # --- Layer 1 ---
         self.layer1 = nn.Linear(input_shape, 128)
+        self.bn1 = nn.BatchNorm1d(128)
+
+        # --- Layer 2 ---
         self.layer2 = nn.Linear(128, 64)
+        self.bn2 = nn.BatchNorm1d(64)
+
+        # --- Layer 3 ---
         self.layer3 = nn.Linear(64, 32)
+        self.bn3 = nn.BatchNorm1d(32)
+
+        # --- Output Layer ---
         self.output_layer = nn.Linear(32, 1)
+
+        # --- Activation and Dropout (called in forward pass)---
         self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(p=dropout_rate)
 
         self.to(device)  # Move the model to the configured device (GPU or CPU)
         print(f"Initialized PyTorch ANN model for {self.region} on {device}.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Defines the forward pass of the model."""
-        x = self.relu(self.layer1(x))
-        x = self.relu(self.layer2(x))
-        x = self.relu(self.layer3(x))
-        x = self.output_layer(x)
-        return x
+        """
+        Defines the forward pass of the model.
 
+        Args:
+            x (torch.Tensor): The input tensor.
+
+        Returns:
+            torch.Tensor: The output tensor.
+        """
+        # Linear -> Batch Normalization -> Activation -> Dropout
+
+        # Layer 1 forward pass
+        x = self.layer1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        # Layer 2 forward pass
+        x = self.layer2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        # Layer 3 forward pass
+        x = self.layer3(x)
+        x = self.bn3(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        # Output layer forward pass (no activation or dropout on the final output)
+        x = self.output_layer(x)
+
+        return x
     def train_model(self, X_train: np.ndarray, y_train: np.ndarray, epochs: int = 50, batch_size: int = 32,
                     learning_rate: float = 0.001):
         """

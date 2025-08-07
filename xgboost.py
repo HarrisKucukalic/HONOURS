@@ -10,7 +10,7 @@ class XGBoostModel:
         kwargs: Hyperparameters for the xgb.XGBRegressor (e.g., n_estimators, learning_rate).
         """
         self.region = region
-        self.model = xgb.XGBRegressor(**kwargs)
+        self.model = xgb.XGBRegressor(**kwargs, device='cuda')
         print(f"Initialized XGBoost model for {self.region}.")
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
