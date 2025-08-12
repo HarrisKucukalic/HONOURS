@@ -6,6 +6,8 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 from ann import ANNModel
 from pso import PSO_Optimizer
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -31,7 +33,7 @@ class ANN_PSO_Model:
         self.final_model = None
         print(f"Initialized ANN_PSO_Model wrapper for {self.region}.")
 
-    def train(self, X_train, y_train, X_val, y_val, search_space, pso_n_particles, pso_iters, final_epochs=50):
+    def train_model(self, X_train, y_train, X_val, y_val, search_space, pso_n_particles, pso_iters, final_epochs=50):
         """
         Finds optimal hyperparameters using PSO and then trains the final, optimized model.
 
@@ -80,3 +82,59 @@ class ANN_PSO_Model:
             return self.final_model.predict(X_test)
         else:
             raise RuntimeError("Model has not been trained yet. Please call the train() method first.")
+
+    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> dict:
+        """
+        Evaluates the model on the test set and returns performance metrics.
+
+        Args:
+            X_test (np.ndarray): Test feature data.
+            y_test (np.ndarray): Test target data.
+
+        Returns:
+            dict: A dictionary containing evaluation metrics (MAE, RMSE).
+        """
+        print(f"Evaluating ANN-PSO model for {self.region} on test data...")
+
+        # Get model predictions using the existing predict method
+        y_pred = self.predict(X_test)
+
+        # Ensure y_test and y_pred are flat arrays for comparison
+        if y_test.ndim > 1:
+            y_test = y_test.flatten()
+
+        if y_pred.ndim > 1:
+            y_pred = y_pred.flatten()
+
+        # Calculate performance metrics
+        mae = mean_absolute_error(y_test, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+        print(f"Evaluation complete. MAE: {mae:.4f}, RMSE: {rmse:.4f}")
+
+        # Return metrics in a dictionary, as expected by the main script
+        return {"MAE": mae, "RMSE": rmse}
+
+    def save_results(self, results: dict, directory: str):
+        """
+        Saves the evaluation results to a file.
+
+        Args:
+            results (dict): A dictionary containing evaluation metrics.
+            directory (str): The directory path to save the results file.
+        """
+        # Create the directory if it doesn't already exist
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            print(f"Created directory: {directory}")
+
+        # Define the full path for the results file
+        results_path = os.path.join(directory, 'evaluation_results.txt')
+
+        # Write the results to the file
+        with open(results_path, 'w') as f:
+            f.write(f"Results for {self.model.__class__.__name__} on {self.region} data:\n")
+            for key, value in results.items():
+                f.write(f"{key}: {value:.4f}\n")
+
+        print(f"Results saved to {results_path}")

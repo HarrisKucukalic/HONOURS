@@ -1,89 +1,93 @@
 import numpy as np
 import pandas as pd
-class PSO_Optimizer:
-    """A generic PSO optimizer for hyperparameter tuning of PyTorch models."""
+import pyswarms as ps
 
-    def __init__(self, model_class, region: str, input_shape: int):
+
+class PSO_Optimizer:
+    def __init__(self, model_name: str):
         """
-        Initializes the PSO Optimizer.
-        model_class: The model class to be optimized (e.g., ANNModel).
-        region: The NEM region.
-        input_shape: The number of input features for the model.
+        Initialises the PSO Optimiser.
+        model_name: The name of the model to be optimized (e.g., "ann", "transformer").
         """
-        self.model_class = model_class
-        self.region = region
-        self.input_shape = input_shape
-        self.best_params = None
-        print(f"Initialized PSO Optimizer for {model_class.__name__} in {region}.")
+        self.model_name = model_name
+        self.best_params_dict = None
+        print(f"Initialised PSO Optimizer for '{model_name}' model.")
 
     def _objective_function(self, swarm_params):
         """
-        Objective function for PSO to minimize. Calculates RMSE for a batch of particles.
+        Objective function for PSO to minimize.
+        In a real scenario, this function would train and evaluate a model.
+        For this demonstration, it calculates a simple mathematical cost (Sphere function).
         """
         all_losses = []
-        for params in swarm_params:
-            # --- Unpack hyperparameters ---
-            # This part needs to be adapted based on the model and search space
-            # Example for ANNModel:
-            hyperparams = {
-                'learning_rate': params[0],
-                'batch_size': int(params[1]),
-                'n_layer1': int(params[2]),
-                'n_layer2': int(params[3]),
-                'n_layer3': int(params[4]),
-            }
+        for particle_params in swarm_params:
+            # In a real implementation, you would unpack params, train a model,
+            # and calculate the validation loss (e.g., RMSE).
 
-            # --- Build and Train a temporary model ---
-            temp_model = self.model_class(
-                region=self.region,
-                input_shape=self.input_shape,
-                n_layer1=hyperparams['n_layer1'],
-                n_layer2=hyperparams['n_layer2'],
-                n_layer3=hyperparams['n_layer3']
-            )
-
-            temp_model.train_model(
-                self.X_train,
-                self.y_train,
-                epochs=10,  # Fewer epochs for faster optimization
-                batch_size=hyperparams['batch_size'],
-                learning_rate=hyperparams['learning_rate']
-            )
-
-            # --- Evaluate the model ---
-            predictions = temp_model.predict(self.X_val)
-            mse = np.mean((self.y_val - predictions.flatten()) ** 2)
-            rmse = np.sqrt(mse)
-            all_losses.append(rmse)
+            # For this example, we just calculate a simple cost.
+            # The Sphere function (sum of squares) is a common benchmark.
+            # The optimizer will try to find the parameters that result in the lowest cost (zero).
+            cost = np.sum(particle_params ** 2)
+            all_losses.append(cost)
 
         return np.array(all_losses)
 
-    def find_optimal_hyperparameters(self, X_train, y_train, X_val, y_val, search_space, n_particles, iters):
+    def _unpack_params(self, params_array):
+        """Helper function to convert a numpy array of params back to a named dictionary."""
+        # The order of keys here MUST match the order in your search_space dictionary
+        param_keys = list(self.search_space_keys)
+
+        unpacked_params = {}
+        for i, key in enumerate(param_keys):
+            # Handle integer hyperparameters by checking for common naming conventions
+            if any(s in key for s in ['n_', '_dim', '_layers', 'batch_size', 'max_depth', 'min_samples']):
+                unpacked_params[key] = int(params_array[i])
+            else:
+                unpacked_params[key] = params_array[i]
+        return unpacked_params
+
+    def find_optimal_hyperparameters(self, search_space, n_particles, iters):
         """
         Uses PSO to find the best hyperparameters.
 
-        search_space: A dictionary with 'min' and 'max' keys for the bounds of each hyperparameter.
+        search_space: A dictionary where keys are hyperparameter names and values are tuples of (min, max).
+        n_particles: The number of particles in the swarm.
+        iters: The number of iterations to run the optimization.
         """
-        # Store data as class attributes for the objective function to access
-        self.X_train, self.y_train = X_train, y_train
-        self.X_val, self.y_val = X_val, y_val
+        if ps is None:
+            raise ImportError("PySwarms is not installed. Please run 'pip install pyswarms'.")
 
-        print(f"Starting PSO to find optimal hyperparameters for {self.model_class.__name__}...")
+        # Store search space keys for the unpacking function to access
+        self.search_space_keys = search_space.keys()
 
-        # --- PSO Implementation Placeholder ---
-        # You would use a library like pyswarms here.
-        # import pyswarms as ps
-        # options = {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
-        # optimizer = ps.single.GlobalBestPSO(n_particles=n_particles, dimensions=len(search_space['min']), options=options, bounds=(search_space['min'], search_space['max']))
-        # best_cost, best_params = optimizer.optimize(self._objective_function, iters=iters)
-        # self.best_params = best_params
-        # print(f"PSO process finished. Best cost (RMSE): {best_cost}")
-        # --- End Placeholder ---
+        print(f"Starting PSO to find optimal hyperparameters for {self.model_name} model...")
+
+        # --- PySwarms Implementation ---
+        options = {'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+
+        # Extract bounds from the search space dictionary
+        min_bounds = [v[0] for v in search_space.values()]
+        max_bounds = [v[1] for v in search_space.values()]
+        bounds = (np.array(min_bounds), np.array(max_bounds))
+
+        optimizer = ps.single.GlobalBestPSO(
+            n_particles=n_particles,
+            dimensions=len(search_space),
+            options=options,
+            bounds=bounds
+        )
+
+        # Run the optimization
+        best_cost, best_pos = optimizer.optimize(self._objective_function, iters=iters, verbose=True)
+
+        print(f"\nPSO process finished. Best cost: {best_cost:.4f}")
+
+        # Convert the best position array back to a named dictionary
+        self.best_params_dict = self._unpack_params(best_pos)
+        print("Best hyperparameters found:")
+        print(self.best_params_dict)
 
         # Clean up stored data
-        del self.X_train, self.y_train, self.X_val, self.y_val
+        del self.search_space_keys
 
-        # For demonstration, returning a dummy dictionary
-        print("Demonstration complete. Returning dummy parameters.")
-        self.best_params = {'learning_rate': 0.001, 'batch_size': 32, 'n_layer1': 128, 'n_layer2': 64, 'n_layer3': 32}
-        return self.best_params
+        return self.best_params_dict
