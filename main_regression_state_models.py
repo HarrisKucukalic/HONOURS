@@ -125,19 +125,76 @@ if __name__ == '__main__':
         # Inner Loop: Run Models
         print(f"\n--- Training models for {state_name} ---")
         for model_class in MODELS_TO_RUN:
-            model = model_class(region=state_name)
-            model_class_name = model.__class__.__name__
+
+            model_class_name = model_class.__name__
             if "Transformer" in model_class_name:
                 X_train, y_train = X_train_seq, y_train_seq
                 X_val, y_val = X_val_seq, y_val_seq
                 X_test, y_test = X_test_seq, y_test_seq
+                model = model_class(region=state_name)
+            elif "ANN" in model_class_name:
+                X_train, y_train = X_train_flat.values, y_train_flat.values
+                X_val, y_val = X_val_flat.values, y_val_flat.values
+                X_test, y_test = X_test_flat.values, y_test_flat.values
+                input_shape = X_train_flat.shape[1]
+                model = model_class(region=state_name, input_shape=input_shape)
             else:
                 X_train, y_train = X_train_flat, y_train_flat
                 X_val, y_val = X_val_flat, y_val_flat
                 X_test, y_test = X_test_flat, y_test_flat
+                model = model_class(region=state_name)
 
             results_dir = os.path.join('model_results', state_name, model_class_name)
-            model.train_model(X_train, y_train, X_val, y_val)
+            if "ANN_PSO_Model" in model_class_name:
+                print(f"Detected PSO model. Starting hyperparameter search...")
+                MAX_LAYERS = 5
+                NEURON_POWER_MIN, NEURON_POWER_MAX = 4, 9
+                search_space = {
+                    # 1. A parameter to control the number of layers (from 1 to MAX_LAYERS)
+                    'num_layers': (1, MAX_LAYERS),
+
+                    # 2. A parameter for each potential layer's neuron count
+                    **{f'neurons_power_layer_{i}': (NEURON_POWER_MIN, NEURON_POWER_MAX) for i in range(MAX_LAYERS)},
+
+                    # 3. Your other parameters
+                    'learning_rate': (1e-4, 1e-2),
+                    'epochs': (50, 150),
+                    'batch_size_power': (5, 7)  # For batch sizes 32, 64, 128
+                }
+                model.run_training_loop(
+                    X_train, y_train,
+                    X_val, y_val,
+                    search_space=search_space,
+                    pso_n_particles=20,
+                    pso_iters=10
+                )
+            if model_class_name == "Transformer_PSO_Model":
+                print("Detected Transformer PSO model. Setting up search space...")
+
+                # Search space for Transformer hyperparameters
+                search_space = {
+                    'd_model': (64, 256),  # Embedding dimension
+                    'n_heads_power': (1, 3),  # For 2, 4, or 8 heads
+                    'num_encoder_layers': (1, 6),  # Number of transformer blocks
+                    'dim_feedforward': (128, 1024),  # Size of the feedforward network
+
+                    # Common training hyperparameters
+                    'learning_rate': (1e-5, 1e-3),
+                    'epochs': (20, 100),
+                    'batch_size_power': (4, 6)  # For batch sizes 16, 32, 64
+                }
+
+                # Call the training loop with this search space
+                model.train_model(
+                    X_train, y_train, X_val, y_val,
+                    search_space=search_space,
+                    pso_n_particles=20,
+                    pso_iters=10
+                )
+            else:
+                print(f"Detected standard model. Starting training...")
+                # Standard models use train_model
+                model.train_model(X_train, y_train, X_val, y_val)
             results = model.evaluate(X_test, y_test)
             model.save_results(results, results_dir)
             print("-" * 40)

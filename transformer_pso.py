@@ -113,7 +113,8 @@ class Transformer_PSO_Model:
 
         # Write the results to the file
         with open(results_path, 'w') as f:
-            f.write(f"Results for {self.model.__class__.__name__} on {self.region} data:\n")
+            # Corrected line: Use self.__class__.__name__
+            f.write(f"Results for {self.__class__.__name__} on {self.region} data:\n")
             for key, value in results.items():
                 f.write(f"{key}: {value:.4f}\n")
 

@@ -3,17 +3,18 @@ import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import os
+import cupy as cp
 
 class XGBoostModel:
     """A generic XGBoost model for NEM price prediction."""
-    def __init__(self, region: str, **kwargs):
+    def __init__(self, region: str):
         """
         Initializes the XGBoost Regressor.
         region: The NEM region for which the model is being trained.
         kwargs: Hyperparameters for the xgb.XGBRegressor (e.g., n_estimators, learning_rate).
         """
         self.region = region
-        self.model = xgb.XGBRegressor(**kwargs, device='cuda')
+        self.model = xgb.XGBRegressor(booster='dart', eval_metric='rmse', device='cuda')
         print(f"Initialized XGBoost model for {self.region}.")
 
     def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray):
@@ -38,27 +39,25 @@ class XGBoostModel:
 
     def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> dict:
         """
-        Evaluates the model on the test set and returns performance metrics.
-
-        Args:
-            X_test (np.ndarray): Test feature data.
-            y_test (np.ndarray): Test target data.
-
-        Returns:
-            dict: A dictionary containing evaluation metrics (MAE, RMSE).
+        Evaluates the model on the test set.
         """
-        print(f"Evaluating xgBoost model for {self.region} on test data...")
+        print(f"Evaluating XGBoost model for {self.region} on test data...")
 
-        # Get model predictions
-        y_pred = self.predict(X_test)
+        # Convert the NumPy array from the CPU to a CuPy array on the GPU
+        X_test_gpu = cp.asarray(X_test)
 
-        # Calculate performance metrics
-        mae = mean_absolute_error(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        # Now, predict using the GPU data. The warning will disappear.
+        y_pred = self.model.predict(X_test_gpu)
+
+        # The predictions will be on the GPU, so move them back to CPU for sklearn metrics
+        y_pred_cpu = cp.asnumpy(y_pred)
+
+        # Calculate metrics
+        mae = mean_absolute_error(y_test, y_pred_cpu)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred_cpu))
 
         print(f"Evaluation complete. MAE: {mae:.4f}, RMSE: {rmse:.4f}")
 
-        # Return metrics in a dictionary
         return {"MAE": mae, "RMSE": rmse}
 
     def save_results(self, results: dict, directory: str):

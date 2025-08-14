@@ -13,70 +13,49 @@ print(f"Using device: {device}")
 class ANNModel(nn.Module):
     """A generic Artificial Neural Network (ANN) model for NEM price prediction using PyTorch."""
 
-    def __init__(self, region: str, input_shape: int, dropout_rate: float = 0.3):
-        """
-        Initializes the ANN model.
-        region: The NEM region for which the model is being trained.
-        input_shape: The number of input features.
-        """
+    def __init__(self, region: str, input_shape: int,
+                 layer_neurons: list = None, dropout_rate: float = 0.3):
+
         super(ANNModel, self).__init__()
         self.region = region
-        # --- Layer 1 ---
-        self.layer1 = nn.Linear(input_shape, 128)
-        self.bn1 = nn.BatchNorm1d(128)
 
-        # --- Layer 2 ---
-        self.layer2 = nn.Linear(128, 64)
-        self.bn2 = nn.BatchNorm1d(64)
+        if layer_neurons is None:
+            layer_neurons = [128, 64, 32]
 
-        # --- Layer 3 ---
-        self.layer3 = nn.Linear(64, 32)
-        self.bn3 = nn.BatchNorm1d(32)
+        self.layers = nn.ModuleList()
 
-        # --- Output Layer ---
-        self.output_layer = nn.Linear(32, 1)
+        # This variable tracks the input size for each new layer. It starts with the model's input shape.
+        in_features = input_shape
 
-        # --- Activation and Dropout (called in forward pass)---
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(p=dropout_rate)
+        # --- A single loop to create all hidden layers ---
+        for out_features in layer_neurons:
+            # Connect the previous layer's size (in_features) to the new size (out_features)
+            self.layers.append(nn.Linear(in_features, out_features))
+            self.layers.append(nn.BatchNorm1d(out_features))
+            self.layers.append(nn.ReLU())
+            self.layers.append(nn.Dropout(dropout_rate))
 
-        self.to(device)  # Move the model to the configured device (GPU or CPU)
-        print(f"Initialized PyTorch ANN model for {self.region} on {device}.")
+            # IMPORTANT: Update in_features to be the output size for the next loop iteration
+            in_features = out_features
+
+        # After the loop, 'in_features' holds the size of the last hidden layer (32)
+        self.output_layer = nn.Linear(in_features, 1)
+
+        self.to(device)
+        print(f"Initialised DYNAMIC PyTorch ANN for {self.region} on {device} with {layer_neurons} hidden layers.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Defines the forward pass of the model.
-
-        Args:
-            x (torch.Tensor): The input tensor.
-
-        Returns:
-            torch.Tensor: The output tensor.
+        Defines the forward pass for the dynamically built model.
         """
-        # Linear -> Batch Normalization -> Activation -> Dropout
+        # Loop through all the layers (Linear, BatchNorm, ReLU, Dropout) in the list
+        for layer in self.layers:
+            # BatchNorm can fail on a batch size of 1 during eval, so we add a check
+            if isinstance(layer, nn.BatchNorm1d) and x.shape[0] <= 1:
+                continue
+            x = layer(x)
 
-        # Layer 1 forward pass
-        x = self.layer1(x)
-        if x.shape[0] > 1:
-            x = self.bn1(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-
-        # Layer 2 forward pass
-        x = self.layer2(x)
-        if x.shape[0] > 1:
-            x = self.bn2(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-
-        # Layer 3 forward pass
-        x = self.layer3(x)
-        if x.shape[0] > 1:
-            x = self.bn3(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-
-        # Output layer forward pass (no activation or dropout on the final output)
+        # After the hidden layers, pass through the final output layer
         x = self.output_layer(x)
 
         return x
@@ -219,7 +198,8 @@ class ANNModel(nn.Module):
 
         # Write the results to the file
         with open(results_path, 'w') as f:
-            f.write(f"Results for {self.model.__class__.__name__} on {self.region} data:\n")
+            # Corrected line: Use self.__class__.__name__
+            f.write(f"Results for {self.__class__.__name__} on {self.region} data:\n")
             for key, value in results.items():
                 f.write(f"{key}: {value:.4f}\n")
 

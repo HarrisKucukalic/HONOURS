@@ -1,0 +1,3 @@
+Results for XGBRegressor on Victoria data:
+MAE: 165.0693
+RMSE: 857.7470

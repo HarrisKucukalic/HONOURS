@@ -6,14 +6,14 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 class RandomForestModel:
     """A generic Random Forest model for NEM price prediction."""
-    def __init__(self, region: str, **kwargs):
+    def __init__(self, region: str):
         """
         Initialises the Random Forest Regressor.
         region: The NEM region (e.g., "NSW") for which the model is being trained.
         kwargs: Hyperparameters for the RandomForestRegressor (e.g., n_estimators, max_depth).
         """
         self.region = region
-        self.model = RandomForestRegressor(**kwargs)
+        self.model = RandomForestRegressor(n_estimators=200, criterion='friedman_mse', random_state=42)
         print(f"Initialized Random Forest model for {self.region}.")
 
     def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray):
