@@ -1,3 +1,3 @@
 Results for ANNModel on Victoria data:
-MAE: 135.8403
-RMSE: 834.9879
+MAE: 137.6229
+RMSE: 834.4196

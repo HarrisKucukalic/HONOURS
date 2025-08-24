@@ -1,0 +1,14 @@
+Results for ANN_PSO_Model on Queensland data:
+MAE: 78.8863
+RMSE: 550.6268
+
+Best Hyperparameters Found by PSO:
+num_layers: 2.0589544464976965
+neurons_power_layer_0: 7.4594703559984445
+neurons_power_layer_1: 5.302986958615292
+neurons_power_layer_2: 7.044580490254
+neurons_power_layer_3: 6.18391601153013
+neurons_power_layer_4: 6.449125436800252
+learning_rate: 0.005598062017150914
+epochs: 105.94785358088109
+batch_size_power: 5.743011920553805

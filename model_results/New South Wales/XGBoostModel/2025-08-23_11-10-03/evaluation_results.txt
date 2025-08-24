@@ -1,0 +1,3 @@
+Results for XGBRegressor on New South Wales data:
+MAE: 206.2916
+RMSE: 1071.9019

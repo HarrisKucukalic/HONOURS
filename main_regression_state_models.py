@@ -10,6 +10,7 @@ import os
 import shutil
 import re
 from sklearn.model_selection import train_test_split
+from datetime import datetime
 
 
 def create_sequences(data, feature_cols, target_col, sequence_length):
@@ -45,11 +46,11 @@ if __name__ == '__main__':
     ]
 
     MODELS_TO_RUN = [
-        RandomForestModel,
-        XGBoostModel,
-        ANNModel,
-        ANN_PSO_Model,
-        TransformerModel,
+        # RandomForestModel,
+        # XGBoostModel,
+        # ANNModel,
+        # ANN_PSO_Model,
+        # TransformerModel,
         Transformer_PSO_Model
     ]
 
@@ -69,9 +70,9 @@ if __name__ == '__main__':
     # The sequence length here will be a day, or 288 time frames. Each sequence will be made of 7 of these to make a full week
     SEQUENCE_LENGTH = 288
 
-    if os.path.exists('model_results'):
-        print("Cleaning up old results directory...")
-        shutil.rmtree('model_results')
+    # if os.path.exists('model_results'):
+    #     print("Cleaning up old results directory...")
+    #     shutil.rmtree('model_results')
 
     for state_file in STATE_FILES:
         try:
@@ -131,7 +132,8 @@ if __name__ == '__main__':
                 X_train, y_train = X_train_seq, y_train_seq
                 X_val, y_val = X_val_seq, y_val_seq
                 X_test, y_test = X_test_seq, y_test_seq
-                model = model_class(region=state_name)
+                input_dim = X_train_seq.shape[2]
+                model = model_class(region=state_name, input_shape=input_dim)
             elif "ANN" in model_class_name:
                 X_train, y_train = X_train_flat.values, y_train_flat.values
                 X_val, y_val = X_val_flat.values, y_val_flat.values
@@ -144,59 +146,56 @@ if __name__ == '__main__':
                 X_test, y_test = X_test_flat, y_test_flat
                 model = model_class(region=state_name)
 
-            results_dir = os.path.join('model_results', state_name, model_class_name)
+            run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            base_dir = os.path.join('model_results', state_name, model_class_name)
+            results_dir = os.path.join(base_dir, run_name)
+            os.makedirs(results_dir, exist_ok=True)
             if "ANN_PSO_Model" in model_class_name:
-                print(f"Detected PSO model. Starting hyperparameter search...")
+                print(f"Detected ANN PSO model. Starting hyperparameter search...")
                 MAX_LAYERS = 5
                 NEURON_POWER_MIN, NEURON_POWER_MAX = 4, 9
                 search_space = {
-                    # 1. A parameter to control the number of layers (from 1 to MAX_LAYERS)
                     'num_layers': (1, MAX_LAYERS),
-
-                    # 2. A parameter for each potential layer's neuron count
                     **{f'neurons_power_layer_{i}': (NEURON_POWER_MIN, NEURON_POWER_MAX) for i in range(MAX_LAYERS)},
-
-                    # 3. Your other parameters
                     'learning_rate': (1e-4, 1e-2),
                     'epochs': (50, 150),
-                    'batch_size_power': (5, 7)  # For batch sizes 32, 64, 128
+                    'batch_size_power': (5, 7)
                 }
                 model.run_training_loop(
-                    X_train, y_train,
-                    X_val, y_val,
-                    search_space=search_space,
-                    pso_n_particles=20,
-                    pso_iters=10
+                    X_train, y_train, X_val, y_val,
+                    search_space=search_space, pso_n_particles=20, pso_iters=10
                 )
-            if model_class_name == "Transformer_PSO_Model":
-                print("Detected Transformer PSO model. Setting up search space...")
 
-                # Search space for Transformer hyperparameters
+            elif model_class_name == "Transformer_PSO_Model":
+                print("Detected Transformer PSO model. Starting hyperparameter search...")
                 search_space = {
-                    'd_model': (64, 256),  # Embedding dimension
-                    'n_heads_power': (1, 3),  # For 2, 4, or 8 heads
-                    'num_encoder_layers': (1, 6),  # Number of transformer blocks
-                    'dim_feedforward': (128, 1024),  # Size of the feedforward network
-
-                    # Common training hyperparameters
-                    'learning_rate': (1e-5, 1e-3),
-                    'epochs': (20, 100),
-                    'batch_size_power': (4, 6)  # For batch sizes 16, 32, 64
+                    'model_dim': (32, 128),
+                    'n_heads': (1, 3),
+                    'n_encoder_layers': (1, 4),
+                    'ff_dim': (32, 512),
+                    'learning_rate': (1e-6, 1e-4),
+                    'epochs': (20, 200),
+                    'batch_size_power': (2, 4)
                 }
-
-                # Call the training loop with this search space
                 model.train_model(
                     X_train, y_train, X_val, y_val,
-                    search_space=search_space,
-                    pso_n_particles=20,
-                    pso_iters=10
+                    search_space=search_space, pso_n_particles=10, pso_iters=5
                 )
-            else:
-                print(f"Detected standard model. Starting training...")
-                # Standard models use train_model
+            elif model_class_name == "TransformerModel" or model_class_name == "ANNModel":
+                print(f"Detected standard model: {model_class_name}. Starting training...")
                 model.train_model(X_train, y_train, X_val, y_val)
-            results = model.evaluate(X_test, y_test)
-            model.save_results(results, results_dir)
-            print("-" * 40)
+            else:
+                print(f"Detected standard model: {model_class_name}. Starting training...")
+                model.train_model(X_train, y_train)
+
+            print("\n--- Evaluating and Saving Final Model ---")
+            results, y_true_eval, y_pred_eval = model.evaluate(X_test, y_test)
+            model.save_results(results, y_true_eval, y_pred_eval, results_dir)
+
+            # Save the actual model weights if it was a PSO model
+            if "PSO" in model_class_name:
+                model.save_model(results_dir)
+
+            print("-" * 50)
 
     print("\n\nAll states and models processed successfully.")

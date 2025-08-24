@@ -1,0 +1,3 @@
+Results for TransformerModel on Victoria data:
+MAE: 158.2649
+RMSE: 842.8982

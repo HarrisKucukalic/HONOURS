@@ -62,16 +62,16 @@ class PSO_Optimizer:
             elif self.model_class == TransformerModel:
                 # Decode parameters for the Transformer
                 # Ensure d_model is divisible by n_heads
-                n_heads = 2 ** int(np.round(params['n_heads_power']))  # e.g., 2, 4, 8
-                d_model = int(np.round(params['d_model'] / n_heads)) * n_heads  # Make it divisible
+                n_heads = 2 ** int(np.round(params['n_heads']))  # e.g., 2, 4, 8
+                d_model = int(np.round(params['model_dim'] / n_heads)) * n_heads  # Make it divisible
 
                 model_params = {
                     'region': self.region,
-                    'input_dim': self.input_shape[1],  # Transformer expects the feature dimension
-                    'd_model': d_model,
+                    'input_shape': self.input_shape,  # Transformer expects the feature dimension
+                    'model_dim': d_model,
                     'n_heads': n_heads,
-                    'num_encoder_layers': int(np.round(params['num_encoder_layers'])),
-                    'dim_feedforward': int(np.round(params['dim_feedforward']))
+                    'n_encoder_layers': int(np.round(params['n_encoder_layers'])),
+                    'ff_dim': int(np.round(params['ff_dim']))
                 }
 
             # Common training parameters

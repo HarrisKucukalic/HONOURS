@@ -1,0 +1,14 @@
+Results for ANN_PSO_Model on New South Wales data:
+MAE: 120.7304
+RMSE: 845.1561
+
+Best Hyperparameters Found by PSO:
+num_layers: 1.8304100511789472
+neurons_power_layer_0: 5.057575912301845
+neurons_power_layer_1: 4.978681615791443
+neurons_power_layer_2: 6.8786962392925295
+neurons_power_layer_3: 7.666018298267426
+neurons_power_layer_4: 6.743525552214277
+learning_rate: 0.005965119680555973
+epochs: 111.75191975856178
+batch_size_power: 5.652040853535629
