@@ -1,16 +1,17 @@
-from random_forest import RandomForestModel
-from xgboost_model import XGBoostModel
-from ann import ANNModel
-from ann_pso import ANN_PSO_Model
-from transformer import TransformerModel
-from transformer_pso import Transformer_PSO_Model
+from models.ann import ANNModel
+from models.ann_pso import ANN_PSO_Model
+from models.random_forest import RandomForestModel
+from models.transformer import TransformerModel
+from models.transformer_pso import Transformer_PSO_Model
+from models.LSTM_model import LSTMModel
 import numpy as np
 import pandas as pd
 import os
-import shutil
 import re
 from sklearn.model_selection import train_test_split
 from datetime import datetime
+
+from models.xgboost_model import XGBoostModel
 
 
 def create_sequences(data, feature_cols, target_col, sequence_length):
@@ -49,9 +50,10 @@ if __name__ == '__main__':
         # RandomForestModel,
         # XGBoostModel,
         # ANNModel,
+        LSTMModel,
         # ANN_PSO_Model,
         # TransformerModel,
-        Transformer_PSO_Model
+        # Transformer_PSO_Model
     ]
 
     FEATURE_COLS = [
@@ -128,7 +130,7 @@ if __name__ == '__main__':
         for model_class in MODELS_TO_RUN:
 
             model_class_name = model_class.__name__
-            if "Transformer" in model_class_name:
+            if "Transformer" in model_class_name or "LSTMModel" in model_class_name:
                 X_train, y_train = X_train_seq, y_train_seq
                 X_val, y_val = X_val_seq, y_val_seq
                 X_test, y_test = X_test_seq, y_test_seq
@@ -181,7 +183,7 @@ if __name__ == '__main__':
                     X_train, y_train, X_val, y_val,
                     search_space=search_space, pso_n_particles=10, pso_iters=5
                 )
-            elif model_class_name == "TransformerModel" or model_class_name == "ANNModel":
+            elif model_class_name in ["TransformerModel", "ANNModel", "LSTMModel"]:
                 print(f"Detected standard model: {model_class_name}. Starting training...")
                 model.train_model(X_train, y_train, X_val, y_val)
             else:

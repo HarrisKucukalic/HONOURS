@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,26 +8,20 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 import os
 import matplotlib.pyplot as plt
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 print(f"Using device: {device}")
+
 class ANNModel(nn.Module):
-    """A generic Artificial Neural Network (ANN) model for NEM price prediction using PyTorch."""
-
-    def __init__(self, region: str, input_shape: int,
-                 layer_neurons: list = None, dropout_rate: float = 0.3):
-
+    # A generic Artificial Neural Network (ANN) model for NEM price prediction using PyTorch.
+    def __init__(self, region: str, input_shape: int, layer_neurons: list = None, dropout_rate: float = 0.3):
         super(ANNModel, self).__init__()
         self.region = region
-
         if layer_neurons is None:
             layer_neurons = [128, 64, 32]
 
         self.layers = nn.ModuleList()
-
         # This variable tracks the input size for each new layer. It starts with the model's input shape.
         in_features = input_shape
-
-        # --- A single loop to create all hidden layers ---
+        # Creation of Hidden Layers
         for out_features in layer_neurons:
             # Connect the previous layer's size (in_features) to the new size (out_features)
             self.layers.append(nn.Linear(in_features, out_features))
@@ -36,55 +29,41 @@ class ANNModel(nn.Module):
             self.layers.append(nn.ReLU())
             self.layers.append(nn.Dropout(dropout_rate))
 
-            # IMPORTANT: Update in_features to be the output size for the next loop iteration
+            # Updates in_features to be the output size for the next iteration
             in_features = out_features
 
-        # After the loop, 'in_features' holds the size of the last hidden layer (32)
+        # After the loop, 'in_features' holds the size of the last hidden layer.
         self.output_layer = nn.Linear(in_features, 1)
-
         self.to(device)
         print(f"Initialised DYNAMIC PyTorch ANN for {self.region} on {device} with {layer_neurons} hidden layers.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Defines the forward pass for the dynamically built model.
-        """
         # Loop through all the layers (Linear, BatchNorm, ReLU, Dropout) in the list
         for layer in self.layers:
-            # BatchNorm can fail on a batch size of 1 during eval, so we add a check
+            # BatchNorm can fail on a batch size of 1 during eval, so a check is conducted to avoid a crash
             if isinstance(layer, nn.BatchNorm1d) and x.shape[0] <= 1:
                 continue
             x = layer(x)
-
         # After the hidden layers, pass through the final output layer
         x = self.output_layer(x)
-
         return x
 
-    import copy  # Make sure to import copy at the top of your file
-
-    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray,
-                    epochs: int = 500, batch_size: int = 128, learning_rate: float = 0.001, patience: int = 10):
-        """
-        Trains the ANN model with early stopping.
-        """
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 0.001, patience: int = 10):
         print(f"Training ANN model for {self.region}...")
 
-        # --- Data Setup ---
         X_train_tensor = torch.from_numpy(X_train).float().to(device)
         y_train_tensor = torch.from_numpy(y_train).float().view(-1, 1).to(device)
         train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-
         criterion = nn.MSELoss()
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        optimiser = optim.Adam(self.parameters(), lr=learning_rate)
 
-        # --- Early Stopping Initialization ---
+        # Early Stopping set-up, avoids unnecessary training
         best_val_loss = float('inf')
         patience_counter = 0
         best_model_state = None
 
-        # ▼▼▼ FIX 1: Create val_loader ONLY if validation data exists ▼▼▼
+        # Create val_loader if validation data exists
         val_loader = None
         if X_val is not None and y_val is not None:
             X_val_tensor = torch.from_numpy(X_val).float().to(device)
@@ -92,26 +71,25 @@ class ANNModel(nn.Module):
             val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
             val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
-        # --- Training Loop ---
+        # Training Loop
         for epoch in range(epochs):
-            # --- Training Phase ---
             self.train()
             train_loss = 0.0
             for inputs, targets in train_loader:
-                optimizer.zero_grad()
+                optimiser.zero_grad()
                 outputs = self(inputs)
                 loss = criterion(outputs, targets)
                 loss.backward()
-                optimizer.step()
+                optimiser.step()
                 train_loss += loss.item() * inputs.size(0)
             train_loss /= len(train_loader.dataset)
 
-            # ▼▼▼ FIX 2: Run validation ONLY if val_loader exists ▼▼▼
+            # Run validation only if val_loader exists
             if val_loader:
                 self.eval()
                 val_loss = 0.0
                 with torch.no_grad():
-                    # ▼▼▼ IMPROVEMENT: Validate in batches ▼▼▼
+                    # Validate in batches
                     for inputs, targets in val_loader:
                         outputs = self(inputs)
                         loss = criterion(outputs, targets)
@@ -120,7 +98,7 @@ class ANNModel(nn.Module):
 
                 print(f'Epoch [{epoch + 1}/{epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
 
-                # --- Early Stopping Logic ---
+                # Early Stopping Logic
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     patience_counter = 0
@@ -146,47 +124,34 @@ class ANNModel(nn.Module):
 
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
-        """
-        Makes predictions on new data.
-        """
         print(f"Making predictions with ANN model for {self.region}...")
-        self.eval()  # Set model to evaluation mode
+        # Set model to evaluation mode
+        self.eval()
         X_test_tensor = torch.from_numpy(X_test).float().to(device)
-
         with torch.no_grad():
             predictions = self(X_test_tensor)
 
         return predictions.cpu().numpy()
 
     def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> tuple[dict, np.ndarray, np.ndarray]:
-        """
-        Evaluates the model and returns metrics, true values, and predicted values.
-        """
         print(f"Evaluating {self.__class__.__name__} for {self.region} on test data...")
         y_pred = self.predict(X_test)
-
         # Ensure arrays are flat for metric calculation and plotting
         y_test_flat = y_test.flatten()
         y_pred_flat = y_pred.flatten()
-
         mae = mean_absolute_error(y_test_flat, y_pred_flat)
         rmse = np.sqrt(mean_squared_error(y_test_flat, y_pred_flat))
         results = {"MAE": mae, "RMSE": rmse}
-
         print(f"Evaluation complete. MAE: {mae:.4f}, RMSE: {rmse:.4f}")
-
-        # Return the metrics AND the data needed for plotting
+        # Return the metrics and the data needed for plotting
         return results, y_test_flat, y_pred_flat
 
     def save_results(self, results: dict, y_true: np.ndarray, y_pred: np.ndarray, directory: str):
-        """
-        Saves evaluation metrics and generates diagnostic plots.
-        """
         if not os.path.exists(directory):
             os.makedirs(directory)
             print(f"Created directory: {directory}")
 
-        # --- Save Text Results (Same as before) ---
+        # Save metrics (MAE, RMSE) in a text file.
         results_path = os.path.join(directory, 'evaluation_results.txt')
         with open(results_path, 'w') as f:
             f.write(f"Results for {self.__class__.__name__} on {self.region} data:\n")
@@ -194,9 +159,9 @@ class ANNModel(nn.Module):
                 f.write(f"{key}: {value:.4f}\n")
         print(f"Metrics saved to {results_path}")
 
-        # --- Generate and Save Plots ---
+        # Generate and Save Plots
 
-        # 1. Predicted vs. Actual Scatter Plot
+        # Predicted vs. Actual Scatter Plot
         plt.figure(figsize=(10, 10))
         plt.scatter(y_true, y_pred, alpha=0.3, label='Model Predictions')
         plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], 'r--', lw=2, label='Perfect Prediction')
@@ -208,7 +173,7 @@ class ANNModel(nn.Module):
         plt.savefig(os.path.join(directory, 'predicted_vs_actual.png'))
         plt.close()
 
-        # 2. Residuals Plot
+        # Residuals Plot
         residuals = y_true - y_pred
         plt.figure(figsize=(10, 6))
         plt.scatter(y_pred, residuals, alpha=0.3)
@@ -220,7 +185,7 @@ class ANNModel(nn.Module):
         plt.savefig(os.path.join(directory, 'residuals_plot.png'))
         plt.close()
 
-        # 3. Time Series Comparison (zoomed in on the first 1000 points)
+        # Time Series Comparison (zoomed in on the first 1000 points)
         plt.figure(figsize=(15, 6))
         plt.plot(y_true[:1000], label='Actual Values', color='blue')
         plt.plot(y_pred[:1000], label='Predicted Values', color='orange', alpha=0.8)

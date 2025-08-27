@@ -1,0 +1,12 @@
+Results for Transformer_PSO_Model on New South Wales data:
+MAE: 480.4538
+RMSE: 1109.0176
+
+Best Hyperparameters Found by PSO:
+model_dim: 81.32139883752271
+n_heads: 2.526164313125651
+n_encoder_layers: 2.919223356373965
+ff_dim: 404.35658871335744
+learning_rate: 7.589447147730798e-05
+epochs: 79.61222522835055
+batch_size_power: 3.487160812614114

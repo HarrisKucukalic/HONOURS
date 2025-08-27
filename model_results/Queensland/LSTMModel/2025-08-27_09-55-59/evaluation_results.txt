@@ -1,0 +1,3 @@
+Results for LSTMModel on Queensland data:
+MAE: 85.8054
+RMSE: 547.7379

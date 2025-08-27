@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 import os
-from ann import ANNModel
-from transformer import TransformerModel
+from models.transformer import TransformerModel
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
