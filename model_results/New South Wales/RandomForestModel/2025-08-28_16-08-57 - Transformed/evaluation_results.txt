@@ -1,0 +1,3 @@
+Results for RandomForestRegressor on New South Wales data:
+MAE: 0.4232
+RMSE: 1.4842

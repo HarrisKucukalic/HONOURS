@@ -3,6 +3,7 @@ from models.ann_pso import ANN_PSO_Model
 from models.random_forest import RandomForestModel
 from models.transformer import TransformerModel
 from models.transformer_pso import Transformer_PSO_Model
+from models.xgboost_model import XGBoostModel
 from models.LSTM_model import LSTMModel
 import numpy as np
 import pandas as pd
@@ -10,8 +11,7 @@ import os
 import re
 from sklearn.model_selection import train_test_split
 from datetime import datetime
-
-from models.xgboost_model import XGBoostModel
+from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer
 
 
 def create_sequences(data, feature_cols, target_col, sequence_length):
@@ -28,6 +28,7 @@ def create_sequences(data, feature_cols, target_col, sequence_length):
 
     return np.array(X_sequences), np.array(y_sequences)
 
+
 def clean_col_names(df):
     """Cleans DataFrame column names to be valid Python identifiers."""
     cols = df.columns
@@ -39,6 +40,27 @@ def clean_col_names(df):
     df.columns = new_cols
     return df
 
+
+def fit_transformer(data, method='robust'):
+    # Initialise and fit the chosen scaler on the clipped training data
+    if method == 'robust':
+        scaler = RobustScaler()
+    elif method == 'standard':
+        scaler = StandardScaler()
+    else:
+        scaler = PowerTransformer(method='yeo-johnson')
+    scaler.fit(data)
+    return scaler
+
+
+def transform_data(data, scaler):
+    return scaler.transform(data)
+
+
+def inverse_transform_data(data, scaler):
+    return scaler.inverse_transform(data)
+
+
 if __name__ == '__main__':
     STATE_FILES = [
         'Victoria_master_with_weather.csv',
@@ -47,10 +69,10 @@ if __name__ == '__main__':
     ]
 
     MODELS_TO_RUN = [
-        # RandomForestModel,
-        # XGBoostModel,
-        # ANNModel,
-        LSTMModel,
+        RandomForestModel,
+        XGBoostModel,
+        ANNModel,
+        # LSTMModel,
         # ANN_PSO_Model,
         # TransformerModel,
         # Transformer_PSO_Model
@@ -71,24 +93,16 @@ if __name__ == '__main__':
     TARGET_COL = 'RRP'
     # The sequence length here will be a day, or 288 time frames. Each sequence will be made of 7 of these to make a full week
     SEQUENCE_LENGTH = 288
-
-    # if os.path.exists('model_results'):
-    #     print("Cleaning up old results directory...")
-    #     shutil.rmtree('model_results')
-
     for state_file in STATE_FILES:
         try:
             state_name = state_file.split('_')[0]
             print(f"\n{'=' * 50}")
             print(f"PROCESSING STATE: {state_name}")
             print(f"{'=' * 50}")
-
             print(f"Loading data from {state_file}...")
             df = pd.read_csv(state_file, parse_dates=['DateTime'], index_col='DateTime')
             df = clean_col_names(df)
-
             print(f"Cleaned Columns for {state_name}: {df.columns.tolist()}")
-
         except FileNotFoundError:
             print(f"--- WARNING: {state_file} not found. Skipping. ---")
             continue
@@ -98,32 +112,37 @@ if __name__ == '__main__':
 
         print("Sample of loaded data with cleaned columns:")
         print(df.head())
-        # 3D Sequence, includes time, for transformers
-        X_seq, y_seq = create_sequences(
-            data=df,
-            feature_cols=FEATURE_COLS,
-            target_col=TARGET_COL,
-            sequence_length=SEQUENCE_LENGTH
+        # 3D Sequence, includes time, for transformers & LSTM
+        train_size = int(len(df) * 0.70)
+        val_size = int(len(df) * 0.15)
+        train_df = df.iloc[:train_size].copy()
+        val_df = df.iloc[train_size: train_size + val_size].copy()
+        test_df = df.iloc[train_size + val_size:].copy()
+        # Transformation of data:
+        print("Applying data transformation to RRP target...")
+        scaler = fit_transformer(
+            train_df[[TARGET_COL]].values,
+            method='power'
         )
-        print(f"Created sequential data (3D). X_seq shape: {X_seq.shape}")
-        # non-temporal
-        y = df[TARGET_COL]
-        X = df.drop(columns=[TARGET_COL])
-        print(f"Created non-temporal data {X.shape}, y shape: {y.shape}")
+        # Store original test labels for final evaluation
+        y_test_original_flat = test_df[TARGET_COL].values
+        y_test_original_seq = test_df[TARGET_COL].iloc[SEQUENCE_LENGTH:].values
+        train_df[TARGET_COL] = transform_data(train_df[[TARGET_COL]].values, scaler)
+        val_df[TARGET_COL] = transform_data(val_df[[TARGET_COL]].values, scaler)
+        test_df[TARGET_COL] = transform_data(test_df[[TARGET_COL]].values, scaler)
 
-        # --- 70:15:15 TRAIN-VALIDATION-TEST SPLIT ---
-        # First, split into 70% train and 30% temporary (for val/test)
-        X_train_seq, X_temp_seq, y_train_seq, y_temp_seq = train_test_split(
-            X_seq, y_seq, test_size=0.3, shuffle=False, random_state=42)
-        # Then, split the 30% temporary set in half to get 15% val and 15% test
-        X_val_seq, X_test_seq, y_val_seq, y_test_seq = train_test_split(
-            X_temp_seq, y_temp_seq, test_size=0.5, shuffle=False, random_state=42)
-
-        # Do the same for the flattened data
-        X_train_flat, X_temp_flat, y_train_flat, y_temp_flat = train_test_split(
-            X, y, test_size=0.3, shuffle=False, random_state=42)
-        X_val_flat, X_test_flat, y_val_flat, y_test_flat = train_test_split(
-            X_temp_flat, y_temp_flat, test_size=0.5, shuffle=False, random_state=42)
+        X_train_seq, y_train_seq = create_sequences(train_df, FEATURE_COLS, TARGET_COL, SEQUENCE_LENGTH)
+        X_val_seq, y_val_seq = create_sequences(val_df, FEATURE_COLS, TARGET_COL, SEQUENCE_LENGTH)
+        X_test_seq, y_test_seq = create_sequences(test_df, FEATURE_COLS, TARGET_COL, SEQUENCE_LENGTH)
+        print(f"Created sequential train data. X_train_seq shape: {X_train_seq.shape}")
+        # 2D sequence, for other models
+        X_train_flat = train_df.drop(columns=[TARGET_COL])
+        y_train_flat = train_df[TARGET_COL]
+        X_val_flat = val_df.drop(columns=[TARGET_COL])
+        y_val_flat = val_df[TARGET_COL]
+        X_test_flat = test_df.drop(columns=[TARGET_COL])
+        y_test_flat = test_df[TARGET_COL]
+        print(f"Created flat train data. X_train_flat shape: {X_train_flat.shape}")
 
         # Inner Loop: Run Models
         print(f"\n--- Training models for {state_name} ---")
@@ -134,18 +153,21 @@ if __name__ == '__main__':
                 X_train, y_train = X_train_seq, y_train_seq
                 X_val, y_val = X_val_seq, y_val_seq
                 X_test, y_test = X_test_seq, y_test_seq
+                y_true_original_for_eval = y_test_original_seq
                 input_dim = X_train_seq.shape[2]
                 model = model_class(region=state_name, input_shape=input_dim)
             elif "ANN" in model_class_name:
                 X_train, y_train = X_train_flat.values, y_train_flat.values
                 X_val, y_val = X_val_flat.values, y_val_flat.values
                 X_test, y_test = X_test_flat.values, y_test_flat.values
+                y_true_original_for_eval = y_test_original_flat
                 input_shape = X_train_flat.shape[1]
                 model = model_class(region=state_name, input_shape=input_shape)
             else:
                 X_train, y_train = X_train_flat, y_train_flat
                 X_val, y_val = X_val_flat, y_val_flat
                 X_test, y_test = X_test_flat, y_test_flat
+                y_true_original_for_eval = y_test_original_flat
                 model = model_class(region=state_name)
 
             run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -191,8 +213,21 @@ if __name__ == '__main__':
                 model.train_model(X_train, y_train)
 
             print("\n--- Evaluating and Saving Final Model ---")
-            results, y_true_eval, y_pred_eval = model.evaluate(X_test, y_test)
-            model.save_results(results, y_true_eval, y_pred_eval, results_dir)
+            # Get predictions on the TRANSFORMED data
+            results, y_true_transformed, y_pred_transformed = model.evaluate(X_test, y_test)
+            # INVERSE TRANSFORM the predictions back to the original RRP scale
+            print("Inverse transforming predictions to original RRP scale...")
+            y_pred_original = inverse_transform_data(
+                y_pred_transformed.reshape(-1, 1),
+                scaler
+            ).flatten()
+            # Call save_results with the ORIGINAL true values and ORIGINAL-SCALE predictions
+            model.save_results(
+                results,
+                y_true_original_for_eval,  # The original, untransformed test labels you saved earlier
+                y_pred_original,  # The newly inverse-transformed predictions
+                results_dir
+            )
 
             # Save the actual model weights if it was a PSO model
             if "PSO" in model_class_name:
