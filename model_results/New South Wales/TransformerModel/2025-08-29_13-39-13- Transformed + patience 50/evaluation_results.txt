@@ -1,0 +1,3 @@
+Results for TransformerModel on New South Wales data:
+MAE: 0.7016
+RMSE: 1.6936

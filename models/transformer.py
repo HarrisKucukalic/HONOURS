@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 class TransformerModel(nn.Module):
-    def __init__(self, region: str, input_shape: int, model_dim: int = 128, n_heads: int = 4, n_encoder_layers: int = 3, ff_dim: int = 512, dropout: float = 0.3):
+    def __init__(self, region: str, input_shape: int, model_dim: int = 128, n_heads: int = 8, n_encoder_layers: int = 6, ff_dim: int = 512, dropout: float = 0.3):
         super(TransformerModel, self).__init__()
         self.region = region
         self.encoder = nn.Linear(input_shape, model_dim)
@@ -28,7 +28,7 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         return output
 
-    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 1e-4, patience: int = 10):
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 1e-4, patience: int = 50):
         print(f"Training Transformer model for {self.region}...")
         # Device and Model Setup
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

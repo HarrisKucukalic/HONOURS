@@ -69,12 +69,12 @@ if __name__ == '__main__':
     ]
 
     MODELS_TO_RUN = [
-        RandomForestModel,
-        XGBoostModel,
-        ANNModel,
+        # RandomForestModel,
+        # XGBoostModel,
+        # ANNModel,
         # LSTMModel,
         # ANN_PSO_Model,
-        # TransformerModel,
+        TransformerModel,
         # Transformer_PSO_Model
     ]
 
@@ -111,6 +111,12 @@ if __name__ == '__main__':
             continue
 
         print("Sample of loaded data with cleaned columns:")
+        print(df.head())
+        df['RRP_volatility_6hr'] = df['RRP'].rolling(window=72).std().shift(1)
+        if 'RRP_volatility_6hr' not in FEATURE_COLS:
+            FEATURE_COLS.append('RRP_volatility_6hr')
+        df = df.bfill()
+        print("With previous 6 hrs (6X12 = 72) RRP Volatility:")
         print(df.head())
         # 3D Sequence, includes time, for transformers & LSTM
         train_size = int(len(df) * 0.70)
