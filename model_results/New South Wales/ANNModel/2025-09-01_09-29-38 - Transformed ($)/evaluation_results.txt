@@ -1,0 +1,3 @@
+Results for ANNModel on New South Wales data:
+MAE: 117.4784
+RMSE: 814.1916

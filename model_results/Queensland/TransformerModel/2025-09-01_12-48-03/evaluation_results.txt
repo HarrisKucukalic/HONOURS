@@ -1,0 +1,3 @@
+Results for TransformerModel on Queensland data:
+MAE: 143.8624
+RMSE: 576.6463

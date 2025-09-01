@@ -55,7 +55,7 @@ class LSTMModel(nn.Module):
         out = self.fc(context)
         return out
 
-    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 0.001, patience: int = 10):
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 0.001, patience: int = 50):
         print(f"Training LSTM model for {self.region} with early stopping (patience={patience})...")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(device)

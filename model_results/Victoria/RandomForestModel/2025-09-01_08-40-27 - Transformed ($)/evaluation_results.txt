@@ -1,0 +1,3 @@
+Results for RandomForestRegressor on Victoria data:
+MAE: 185.6528
+RMSE: 972.0592

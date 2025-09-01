@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import os
 import re
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer
 
@@ -73,8 +73,8 @@ if __name__ == '__main__':
         # XGBoostModel,
         # ANNModel,
         # LSTMModel,
-        # ANN_PSO_Model,
-        TransformerModel,
+        ANN_PSO_Model,
+        # TransformerModel,
         # Transformer_PSO_Model
     ]
 
@@ -193,7 +193,7 @@ if __name__ == '__main__':
                 }
                 model.run_training_loop(
                     X_train, y_train, X_val, y_val,
-                    search_space=search_space, pso_n_particles=20, pso_iters=10
+                    search_space=search_space, pso_n_particles=10, pso_iters=5
                 )
 
             elif model_class_name == "Transformer_PSO_Model":
@@ -220,16 +220,25 @@ if __name__ == '__main__':
 
             print("\n--- Evaluating and Saving Final Model ---")
             # Get predictions on the TRANSFORMED data
-            results, y_true_transformed, y_pred_transformed = model.evaluate(X_test, y_test)
+            _, y_true_transformed, y_pred_transformed = model.evaluate(X_test, y_test)
             # INVERSE TRANSFORM the predictions back to the original RRP scale
             print("Inverse transforming predictions to original RRP scale...")
             y_pred_original = inverse_transform_data(
                 y_pred_transformed.reshape(-1, 1),
                 scaler
             ).flatten()
+
+            print("Recalculating metrics in true dollar values...")
+            mae_dollars = mean_absolute_error(y_true_original_for_eval, y_pred_original)
+            rmse_dollars = np.sqrt(mean_squared_error(y_true_original_for_eval, y_pred_original))
+            results_in_dollars = {
+                "MAE": mae_dollars,
+                "RMSE": rmse_dollars
+            }
+            print(f"Final Results -> MAE (dollars): ${mae_dollars:,.2f}, RMSE (dollars): ${rmse_dollars:,.2f}")
             # Call save_results with the ORIGINAL true values and ORIGINAL-SCALE predictions
             model.save_results(
-                results,
+                results_in_dollars,
                 y_true_original_for_eval,  # The original, untransformed test labels you saved earlier
                 y_pred_original,  # The newly inverse-transformed predictions
                 results_dir

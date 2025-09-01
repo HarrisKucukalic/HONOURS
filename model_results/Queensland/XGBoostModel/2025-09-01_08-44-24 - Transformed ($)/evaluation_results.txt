@@ -1,0 +1,3 @@
+Results for XGBRegressor on Queensland data:
+MAE: 76.6668
+RMSE: 536.9028

@@ -1,0 +1,3 @@
+Results for LSTMModel on New South Wales data:
+MAE: 144.6972
+RMSE: 827.9749

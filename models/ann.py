@@ -48,7 +48,7 @@ class ANNModel(nn.Module):
         x = self.output_layer(x)
         return x
 
-    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 0.001, patience: int = 10):
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 0.001, patience: int = 20):
         print(f"Training ANN model for {self.region}...")
 
         X_train_tensor = torch.from_numpy(X_train).float().to(device)

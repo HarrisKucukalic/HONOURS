@@ -1,0 +1,3 @@
+Results for LSTMModel on Victoria data:
+MAE: 151.0750
+RMSE: 793.2165

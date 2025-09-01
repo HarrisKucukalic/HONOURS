@@ -1,0 +1,14 @@
+Results for ANN_PSO_Model on Victoria data:
+MAE: 125.3161
+RMSE: 821.0065
+
+Best Hyperparameters Found by PSO:
+num_layers: 3.3829376579744452
+neurons_power_layer_0: 6.755946067397531
+neurons_power_layer_1: 6.393084597950294
+neurons_power_layer_2: 6.498803331830911
+neurons_power_layer_3: 7.075397819571098
+neurons_power_layer_4: 4.979196207740027
+learning_rate: 0.009825362515515475
+epochs: 89.21795315588653
+batch_size_power: 6.612818388261674

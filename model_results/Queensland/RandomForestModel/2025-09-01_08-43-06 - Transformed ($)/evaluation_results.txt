@@ -1,0 +1,3 @@
+Results for RandomForestRegressor on Queensland data:
+MAE: 71.0809
+RMSE: 511.9907
