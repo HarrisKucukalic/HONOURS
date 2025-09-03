@@ -28,7 +28,7 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         return output
 
-    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 1e-4, patience: int = 50):
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, epochs: int = 500, batch_size: int = 128, learning_rate: float = 1e-4, patience: int = 10):
         print(f"Training Transformer model for {self.region}...")
         # Device and Model Setup
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

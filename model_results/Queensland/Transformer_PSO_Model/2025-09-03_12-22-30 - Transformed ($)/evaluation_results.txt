@@ -1,0 +1,12 @@
+Results for Transformer_PSO_Model on Queensland data:
+MAE: 138.3923
+RMSE: 573.5747
+
+Best Hyperparameters Found by PSO:
+model_dim: 82.94858305272577
+n_heads: 2.5623575162158794
+n_encoder_layers: 1.761581263087805
+ff_dim: 270.89161942893793
+learning_rate: 2.3336134415781936e-05
+epochs: 80.40719640652233
+batch_size_power: 3.6522040712327595

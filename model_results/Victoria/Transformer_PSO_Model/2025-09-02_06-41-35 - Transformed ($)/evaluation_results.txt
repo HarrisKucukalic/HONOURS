@@ -1,0 +1,12 @@
+Results for Transformer_PSO_Model on Victoria data:
+MAE: 189.8924
+RMSE: 854.4791
+
+Best Hyperparameters Found by PSO:
+model_dim: 39.97785993572272
+n_heads: 2.400577259008676
+n_encoder_layers: 1.529418725708637
+ff_dim: 395.5527419453663
+learning_rate: 4.087437075439161e-05
+epochs: 176.81416219055345
+batch_size_power: 3.7042262641732324

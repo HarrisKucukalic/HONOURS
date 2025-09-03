@@ -73,9 +73,9 @@ if __name__ == '__main__':
         # XGBoostModel,
         # ANNModel,
         # LSTMModel,
-        ANN_PSO_Model,
+        # ANN_PSO_Model,
         # TransformerModel,
-        # Transformer_PSO_Model
+        Transformer_PSO_Model
     ]
 
     FEATURE_COLS = [

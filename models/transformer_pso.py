@@ -20,9 +20,9 @@ class Transformer_PSO_Model:
         )
         self.final_model = None
         self.best_hyperparameters = None
-        print(f"Initialized Transformer_PSO_Model wrapper for {self.region}.")
+        print(f"Initialised Transformer_PSO_Model wrapper for {self.region}.")
 
-    def train_modelself(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, search_space: Dict[str, Tuple[Union[int, float], Union[int, float]]], pso_n_particles: int, pso_iters: int):
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray, search_space: Dict[str, Tuple[Union[int, float], Union[int, float]]], pso_n_particles: int, pso_iters: int):
         print("\n--- Step 1: Finding Optimal Hyperparameters for Transformer using PSO ---")
         # Store the best params in the instance variable
         self.best_hyperparameters = self.optimiser.find_optimal_hyperparameters(
@@ -59,6 +59,7 @@ class Transformer_PSO_Model:
             y_full_train,
             X_val=None,
             y_val=None,
+            patience=50,
             **training_params
         )
         print("\nFinal model training complete.")
