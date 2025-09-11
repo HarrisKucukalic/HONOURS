@@ -1,0 +1,11 @@
+ROC AUC Score: 0.9545
+Brier Score Loss: 0.0602
+
+              precision    recall  f1-score   support
+
+           0       1.00      0.91      0.95     24709
+           1       0.03      0.88      0.06        88
+
+    accuracy                           0.91     24797
+   macro avg       0.52      0.89      0.51     24797
+weighted avg       1.00      0.91      0.95     24797

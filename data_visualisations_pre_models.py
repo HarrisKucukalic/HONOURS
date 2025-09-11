@@ -241,15 +241,68 @@ def plot_negative_price_correlation_heatmap(filepath):
             f"❌ An unexpected error occurred while generating the negative price correlation heatmap for {state_name}: {e}")
 
 
+def count_rrp_extremes(file_path):
+    """
+    Reads a CSV file, counts the number of days the RRP was $1000 and above
+    and -$100 and below, as well as spikes ($10000 and above) and prints the results.
+
+    Args:
+        file_path (str): The path to the master CSV file.
+    """
+    try:
+        print(f"\nAnalyzing file: {os.path.basename(file_path)}...")
+
+        # Read the CSV file into a pandas DataFrame
+        df = pd.read_csv(file_path)
+        spikes = 10000
+        max = 1000
+        min = -100
+        # Ensure the 'RRP' column exists
+        if 'RRP' not in df.columns:
+            print(f"  ❌ ERROR: 'RRP' column not found in {os.path.basename(file_path)}.")
+            return
+
+        # Count occurrences above 1000
+        days_above_1000 = (df['RRP'] >= max).sum()
+        max_price_spikes = (df['RRP'] >= spikes).sum()
+        # Count occurrences below -500
+        days_below_minus_500 = (df['RRP'] <= min).sum()
+
+        print(f"  📈 Days with RRP >= {max}: {days_above_1000}")
+        print(f"  📉 Days with RRP <= {min}: {days_below_minus_500}")
+        print(f"  📉 Days with RRP >= {spikes}: {max_price_spikes}")
+
+    except FileNotFoundError:
+        print(f"  ❌ ERROR: File not found at '{file_path}'.")
+    except Exception as e:
+        print(f"  ❌ ERROR: An unexpected error occurred while processing {file_path}: {e}")
+
+
 if __name__ == "__main__":
+    # for master_file in MASTER_FILES:
+    #     if os.path.exists(master_file):
+    #         # plot_all_time_series(master_file)
+    #         # plot_rrp_time_series(master_file)
+    #         # plot_combined_time_series(master_file)
+    #         # plot_correlation_heatmap(master_file)
+    #         # plot_negative_price_correlation_heatmap(master_file)
+    #     else:
+    #         print(f"\n⚠️ WARNING: Master file not found at '{master_file}'. Skipping.")
+    #
+    # print("\nAll analysis and plotting complete.")
+
+    MASTER_FILES = [
+        "New South Wales_master_with_weather.csv",
+        "Victoria_master_with_weather.csv",
+        "Queensland_master_with_weather.csv",
+    ]
+
     for master_file in MASTER_FILES:
         if os.path.exists(master_file):
-            # plot_all_time_series(master_file)
-            plot_rrp_time_series(master_file)
-            # plot_combined_time_series(master_file)
-            # plot_correlation_heatmap(master_file)
-            # plot_negative_price_correlation_heatmap(master_file)
+            count_rrp_extremes(master_file)
+            # You can still call your other plotting functions here if needed
+            # plot_rrp_time_series(master_file)
         else:
             print(f"\n⚠️ WARNING: Master file not found at '{master_file}'. Skipping.")
 
-    print("\nAll analysis and plotting complete.")
+    print("\nAnalysis complete.")

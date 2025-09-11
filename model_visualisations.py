@@ -8,14 +8,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def visualise_model_with_tensorboard(model: nn.Module, input_tensor: torch.Tensor, log_dir: str):
-    """
-    Generates a model graph for visualization in TensorBoard.
-
-    Args:
-        model (nn.Module): The PyTorch model to visualize.
-        input_tensor (torch.Tensor): A dummy input tensor with the correct shape.
-        log_dir (str): The directory where TensorBoard logs will be saved.
-    """
     try:
         # Set the model to evaluation mode to ensure deterministic behavior
         model.eval()
@@ -38,13 +30,13 @@ def visualise_model_with_tensorboard(model: nn.Module, input_tensor: torch.Tenso
 if __name__ == '__main__':
     TRANSFORMER_INPUT_FEATURES = 12
     TRANSFORMER_BATCH_SIZE = 16
-    SEQUENCE_LENGTH = 30  # Example sequence length
+    SEQUENCE_LENGTH = 30
     MODEL_DIM = 128
     N_HEADS = 4
     N_ENCODER_LAYERS = 3
     FF_DIM = 512
 
-    # Instantiate your Transformer model with dropout set to 0 for visualization
+    # Instantiate Transformer model with dropout set to 0 for visualisation
     transformer_model = TransformerModel(
         region="NSW",
         input_dim=TRANSFORMER_INPUT_FEATURES,
@@ -52,7 +44,7 @@ if __name__ == '__main__':
         n_heads=N_HEADS,
         n_encoder_layers=N_ENCODER_LAYERS,
         ff_dim=FF_DIM,
-        dropout=0.0  # Set dropout to 0 to ensure deterministic tracing
+        dropout=0.0
     )
 
     # Create a dummy input tensor with the correct 3D shape for a Transformer
@@ -61,7 +53,7 @@ if __name__ == '__main__':
         device)
 
     # Generate the graph for the Transformer model in a different log directory
-    visualise_model_with_tensorboard(transformer_model, dummy_input_transformer, log_dir="runs/transformer_model")
+    visualise_model_with_tensorboard(transformer_model, dummy_input_transformer, log_dir="deep_learning_model_structures/transformer_model")
 
 
 
