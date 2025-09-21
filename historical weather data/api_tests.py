@@ -123,7 +123,7 @@ def pull_forecast_weather_data(lat, long):
         forecast_url = (
             f"https://api.open-meteo.com/v1/forecast?"
             f"latitude={lat}&longitude={long}"
-            f"&hourly={HOURLY_VARIABLES}"  # <-- Using the expanded list of variables
+            f"&hourly={HOURLY_VARIABLES}"
             f"&forecast_days=1"  # Limit forecast to 1 day (24 hours)
         )
 
@@ -292,14 +292,14 @@ def main_states():
                 # If there was existing data, concatenate the old and new dataframes.
                 df_combined = pd.concat([df_existing, df_new])
             else:
-                # Otherwise, the new dataframe is our combined dataframe.
+                # Otherwise, the new dataframe is the combined dataframe.
                 df_combined = df_new
 
             # Save the final result to a CSV file.
             df_combined.to_csv(output_filepath, index_label='DateTime')
             print(f"  - ✅ Successfully updated file: {os.path.basename(output_filepath)}")
 
-    print("\n--- All states processed. ---")
+    print("\n All states processed.")
 
 if __name__ == "__main__":
     main_states()

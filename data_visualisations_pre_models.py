@@ -300,7 +300,6 @@ if __name__ == "__main__":
     for master_file in MASTER_FILES:
         if os.path.exists(master_file):
             count_rrp_extremes(master_file)
-            # You can still call your other plotting functions here if needed
             # plot_rrp_time_series(master_file)
         else:
             print(f"\n⚠️ WARNING: Master file not found at '{master_file}'. Skipping.")

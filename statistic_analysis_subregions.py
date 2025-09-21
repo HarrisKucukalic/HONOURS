@@ -178,7 +178,6 @@ def load_and_merge_capacity_data(df_main: pd.DataFrame, capacity_filepath: Path)
         sheets_dict = pd.read_excel(capacity_filepath, sheet_name=None)
         all_sheets_list = []
         for sheet_name, sheet_df in sheets_dict.items():
-            # --- ACTION REQUIRED: Verify these column names match your Excel file ---
             original_name_col = 'Name'
             original_capacity_col = 'Gen. Capacity (MW)'
             sheet_df.rename(columns={
@@ -291,7 +290,7 @@ if __name__ == '__main__':
                             output_dir=str(output_folder)
                         )
                     else:
-                        # This is expected for e.g. 'Wind_Speed' in a solar dataset
+                        # This is expected for columns like 'Wind_Speed' in a solar dataset
                         pass
 
         except Exception as e:

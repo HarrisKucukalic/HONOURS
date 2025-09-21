@@ -2,7 +2,7 @@ import pandas as pd
 import folium
 import os
 
-# The name of your Excel file containing the facility data.
+# The name of the Excel file containing the facility data.
 INPUT_EXCEL_FILE = "Wind & Solar Gen. Open Elec.xlsx"
 
 # The name of the output HTML file for the map.
@@ -14,7 +14,7 @@ def create_facility_map():
     Reads facility location data from an Excel file and creates an
     interactive geographic map using Folium.
     """
-    print("--- Starting Interactive Map Generation ---")
+    print("Starting Interactive Map Generation")
 
     # Load Data
     try:
@@ -115,6 +115,5 @@ def create_facility_map():
         print(f"\n❌ An error occurred while saving the map: {e}")
 
 
-# Run the script
 if __name__ == "__main__":
     create_facility_map()

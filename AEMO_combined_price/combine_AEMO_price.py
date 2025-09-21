@@ -48,7 +48,6 @@ def merge_csv_files_in_directory(directory_path):
     print("Combining all files...")
     merged_df = pd.concat(df_list, ignore_index=True)
 
-    # --- Deduplication Step ---
     # Check if the key column for deduplication exists
     if 'SETTLEMENTDATE' not in merged_df.columns:
         print(f"Error: 'SETTLEMENTDATE' column not found. Cannot deduplicate.")
@@ -63,7 +62,7 @@ def merge_csv_files_in_directory(directory_path):
         output_filename = f"{os.path.basename(directory_path)}_combined.csv"
 
 
-    # --- Save the Merged Dataframe to a new CSV file ---
+    # Save the merged dataframe to a new csv file
     try:
         merged_df.to_csv(output_filename, index=False)
         print(f"Successfully created '{output_filename}' with {len(merged_df)} unique rows.")

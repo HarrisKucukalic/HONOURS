@@ -2,8 +2,6 @@ import pandas as pd
 import os
 import glob
 
-
-
 # Keywords to identify states and group files.
 STATES = ['Victoria', 'New South Wales', 'Queensland']
 
@@ -12,12 +10,9 @@ KEYWORDS_TO_DROP = [
     'Battery', 'Pump', 'Export', 'Import', 'Coal', 'Bioenergy',
     'Distillate', 'Gas', 'Hydro', 'Emissions', 'Volume', 'Net'
 ]
-
 # Directory to search for files. Using the path you provided.
 SOURCE_DIRECTORY = r'C:\projects\HONOURS\combined_5min'
 
-
-# --- Main Processing Function ---
 
 def combine_and_clean_by_state():
     """
@@ -26,7 +21,7 @@ def combine_and_clean_by_state():
     """
     print("Starting State Data Combination and Cleaning")
 
-    # Loop through each state we want to process
+    # Loop through each state to process
     for state in STATES:
         print(f"\nProcessing state: {state}")
 

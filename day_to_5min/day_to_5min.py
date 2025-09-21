@@ -25,8 +25,8 @@ def generate_solar_profile(intervals_per_day=288):
     # Generate a sine wave profile (shifted to be positive during the day)
     # The sine wave naturally models the rise and fall of the sun.
     profile = np.sin(time_axis - np.pi/2) + 1
-    # Solar generation is zero at night, so clip values outside of daylight hours.
-    # This is approxmated by setting the first (early morning) and last (late evening) quarters of the day to 0.
+    # Solar generation is zero at night, so clip values outside daylight hours.
+    # This is approximated by setting the first (early morning) and last (late evening) quarters of the day to 0.
     daylight_start = intervals_per_day // 4
     daylight_end = intervals_per_day * 3 // 4
     profile[:daylight_start] = 0
@@ -153,9 +153,8 @@ def process_energy_files():
         except Exception as e:
             print(f"❌ ERROR processing file '{filename}': {e}")
 
-    print("\n--- All files processed. ---")
+    print("\nAll files processed.")
 
 
-# --- Run the script ---
 if __name__ == "__main__":
     process_energy_files()
