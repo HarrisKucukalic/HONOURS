@@ -96,4 +96,3 @@ This work would not have been possible without the publicly available data provi
 59. Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., & Polosukhin, I. (2017). Attention Is All You Need. 31st Conference on Neural Information Processing Systems (NIPS 2017). https://arxiv.org/pdf/1706.03762
 60. Wise. (n.d.). Japanese yen to Australian dollars exchange rate history | Currency converter | Wise. https://wise.com/au/currency-converter/jpy-to-aud-rate/history/01-08-2020
 61. YAĞCI, H. E. (2021, February 22). Feature scaling with scikit-learn for data science. Medium. https://hersanyagci.medium.com/feature-scaling-with-scikit-learn-for-data-science-8c4cbcf2daff
-
